@@ -1,0 +1,21 @@
+{
+    "task_number": 1,
+    "work_time": 85498.89511942863,
+    "1": {
+        "task_list": [
+            {
+                "station_id": "a",
+                "operation": "manual",
+                "duration": 0
+            },
+            {
+                "station_id": "b",
+                "operation": "manual",
+                "duration": 0
+            }
+        ],
+        "run_times": 2,
+        "path_type": "origin",
+        "create_on": "2022-10-15 18:56:21"
+    }
+}

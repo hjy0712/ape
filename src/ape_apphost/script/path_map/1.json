@@ -1,0 +1,18 @@
+{
+    "mapDirectory": "",
+    "header": {
+        "mapType": "2D-Map",
+        "mapName": "test",
+        "minPos": {},
+        "maxPos": {},
+        "resolution": 0,
+        "version": "1.0.6"
+    },
+    "normalPosList": [],
+    "rssiPosList": [],
+    "normalLineList": [],
+    "advancedPointList": [],
+    "advancedLineList": [],
+    "advancedCurveList": [],
+    "advancedAreaList": []
+}
