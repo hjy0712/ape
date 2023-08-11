@@ -1,0 +1,11 @@
+click
+Flask==2.2.5
+flask_sqlalchemy
+numpy
+pymongo
+pytictoc
+scipy
+sensor_msgs
+transforms3d
+transitions
+rospkg

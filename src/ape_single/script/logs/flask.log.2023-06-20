@@ -1,0 +1,22 @@
+[2023-06-19 22:43:40,014][ApeNavigation.py:403][ERROR][139640073852672] - /api/ApeNavigation/routeInfoGet : 'type'
+[2023-06-19 22:46:15,158][ApeNavigation.py:403][ERROR][139640073852672] - /api/ApeNavigation/routeInfoGet : 'route_id'
+[2023-06-19 22:46:28,305][ApeNavigation.py:403][ERROR][139640073852672] - /api/ApeNavigation/routeInfoGet : 'list' object has no attribute 'update'
+[2023-06-20 10:22:29,814][ApeNavigation.py:333][ERROR][139928130275072] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 10:22:38,835][ApeNavigation.py:333][ERROR][139928130275072] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 10:50:56,284][ApeNavigation.py:333][ERROR][139928121882368] - /api/ApeNavigation/routeSave : update only works with $ operators
+[2023-06-20 13:47:51,478][app.py:111][ERROR][139859628910336] - /api/ApeNavigation/finishBuildMap : The map build is not complete!
+[2023-06-20 13:47:56,743][app.py:111][ERROR][139859628910336] - /api/ApeNavigation/finishBuildMap : The map build is not complete!
+[2023-06-20 15:47:18,041][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:47:23,307][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:47:28,894][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:47:34,855][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:48:37,796][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:50:39,744][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:50:55,147][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:51:00,288][ApeNavigation.py:333][ERROR][139859612124928] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:51:46,422][ApeNavigation.py:333][ERROR][139860132210432] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 15:52:10,819][ApeNavigation.py:333][ERROR][139860132210432] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 16:00:12,827][ApeNavigation.py:333][ERROR][139860132210432] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 16:01:04,258][ApeNavigation.py:333][ERROR][139860132210432] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 16:01:40,030][ApeNavigation.py:333][ERROR][139860132210432] - /api/ApeNavigation/routeSave : '-1' is not a valid ObjectId, it must be a 12-byte input or a 24-character hex string
+[2023-06-20 21:53:28,882][ApeNavigation.py:333][ERROR][140526850381568] - /api/ApeNavigation/routeSave : update only works with $ operators

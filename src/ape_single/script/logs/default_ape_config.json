@@ -1,0 +1,32 @@
+{
+    "vehicle_type": "ape",
+    "obstacle_left": false,
+    "obstacle_right": false,
+    "fork_left": false,
+    "fork_right": false,
+    "auto_charge": false,
+    "low_charge_value": 0.2,
+    "init_status": true,
+    "avoid_set": false,
+    "plan_type" : 0,
+    "body_param":{
+        "unlift_wheelbase":1150.0,
+        "lift_wheelbase":1030.0,
+        "center_deviation":0.0,
+        "zero_position":0.0,
+        "rear_track":0,
+        "rear_radius":0
+    },
+    "motion_param":{
+        "max_speed":0.4,
+        "max_angle_speed":0.5,
+        "max_acceleration":0.4,
+        "max_angle_acceleration":0.0,
+        "max_wheel_angular_speed":0.5,
+        "path_discrete":0.6,
+        "position_track_accuracy":8000.0,
+        "angle_track_accuracy":1000.0
+    },
+    "no_avoid_area" :[],
+    "avoid_invalid": false
+}

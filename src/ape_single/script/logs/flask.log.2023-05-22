@@ -1,0 +1,1 @@
+[2023-05-22 10:45:06,897][ApeNavigation.py:421][ERROR][140538544109312] - /api/ApeNavigation/taxiTaskToGo : empty range for randrange() (0,0, 0)

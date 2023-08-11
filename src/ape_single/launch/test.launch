@@ -1,0 +1,32 @@
+<launch>
+
+  <env name="ROSCONSOLE_CONFIG_FILE"
+        value="$(find ape_coordinate)/config/custom_rosconsole.config"/>
+  <param name="/use_sim_time" value="false" />
+  <param name="robot_description" command="$(find xacro)/xacro '$(find ape_coordinate)/urdf/ape.urdf.xacro'" />
+
+  <node name="cartographer_node_localization" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find ape_coordinate)/config 
+          -configuration_basename ape_backpack_2d_localization.lua
+          -load_state_filename /home/ape/APE_Application/src/ape_single/script/envs/map/origin/origin.pbstream"
+      output="screen">
+    <remap from="scan" to="/r2000_node/scan" />
+  </node>
+
+  <node name="cartographer_occupancy_grid_node_localization" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
+
+  <node name="rviz" pkg="rviz" type="rviz" required="false"
+      args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
+
+
+<!-- send message to stm32 -->
+  <node pkg="ape_message_to_device" type="serial_connect" name="ape_serial_connect"/>
+<!-- build tftree in ros -->
+  <include file="$(find ape_coordinate)/launch/ape_tftree.launch"/>
+<!-- laser working -->
+  <include file="$(find pepperl_fuchs_r2000)/launch/r2000.launch"/>
+<!-- publish location -->
+  <node pkg="ape_tracking" type="location_and_pose" name="tf_Pose_Publisher"/>
+</launch>
