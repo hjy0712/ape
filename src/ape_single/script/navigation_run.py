@@ -4,9 +4,10 @@
 import rospy
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
-from std_srvs.srv import Empty, EmptyResponse
-from geometry_msgs.msg import Twist
 from std_msgs.msg import UInt8
+from ape_single.msg import PathSegment
+from ape_single.msg import PositionInfo
+from std_msgs.msg import Int64
 
 import json, math
 import time, datetime
@@ -112,7 +113,6 @@ def Station_BFS(start_station:str, finish_station:str, maps:dict) ->list:
     return path
 
 
-
 class NavRun(object):
 
     states = ['none', 'run_to_next_station', 'wait_for_tracking', "do_operation", "charge"]
@@ -127,7 +127,7 @@ class NavRun(object):
 
         # when the control is on, need to send path data to topic '/APETrack/TrackPath'
         self.machine.add_transition(trigger='send_start', source=['none', 'do_operation'], dest='run_to_next_station',
-                         after=['In_Change_Log', 'Get_Path'], before='Out_Change_Log')
+                         after=['In_Change_Log', 'Send_Message'], before='Out_Change_Log')
 
         # when the info has been sent, need to wait for the tracking callback
         # the state change from "wait_for_tracking" to other is triggered in service callback
@@ -135,8 +135,8 @@ class NavRun(object):
                          after=['In_Change_Log'], before='Out_Change_Log')
 
         # when tracking is done, need to do assigned operation
-        self.machine.add_transition('sub_station_reach', 'wait_for_tracking', 'run_to_next_station',
-                         after=['In_Change_Log', "Send_Message"], before='Out_Change_Log')
+        # self.machine.add_transition('sub_station_reach', 'wait_for_tracking', 'run_to_next_station',
+        #                  after=['In_Change_Log', "Send_Message"], before='Out_Change_Log')
 
         # when tracking is done, need to do assigned operation
         self.machine.add_transition('station_reach', 'wait_for_tracking', 'do_operation',
@@ -145,14 +145,6 @@ class NavRun(object):
         # when station is the last, need to stop the nav
         self.machine.add_transition('complete', 'do_operation', 'none',
                          after=['In_Change_Log', "Complete_Task"], before='Out_Change_Log')
-
-        # when agv need charge, switch to charge
-        self.machine.add_transition('wait_for_charge', 'do_operation', 'charge',
-                         after=['In_Change_Log'], before='Out_Change_Log')
-
-        # when agv charge off, switch to run
-        self.machine.add_transition('charge_to_run', 'charge', 'run_to_next_station',
-                         after=['In_Change_Log', 'Get_Path'], before='Out_Change_Log')
 
         # init maps
         self.maps = generate_maps()
@@ -172,22 +164,33 @@ class NavRun(object):
         # 存放任务是否暂停
         self.stop_action = False
 
-        # 存放子任务链
-        self.AGV_subStationList = []
         # 当前任务执行完成标志
-        self.AGV_subOperationDone = False
-        # 子任务链当前执行站点序号
-        self.AGV_subStationIndex = 0
-        self.seq = 0
-        self.path_pub = rospy.Publisher('/APETrack/TrackPath',Path, queue_size=1)
+        self.AGV_operationDone = False
+
         # 人工放行
         self.sound = True
         # 延时等待
         self.wait_time = 0
         self.wait_time_trigger = True
 
+        # 自动充电
         self.chargemsg = UInt8()
         self.Charge_pub = rospy.Publisher('/APE_Charge', UInt8, queue_size=10)
+
+        # sequenceID
+        self.seq = 0
+        self.seq_received = 0
+        self.path_pub = rospy.Publisher(CONTROL_PATH_TOPIC_NAME,PathSegment, queue_size=1)
+        self.seq_sub = rospy.Subscriber(CONTROL_SEQ_TOPIC_NAME, Int64, self.seqCallback)
+
+
+    def seqCallback(self, msg):
+        """用于control向后端发送的sequenceID的回调函数
+
+        Args:
+            msg (_type_): 传递过来的topic
+        """
+        self.seq_received = msg.data
 
 
     def Action_Detail(self):
@@ -206,7 +209,7 @@ class NavRun(object):
 
             statusDict = statusCollection.find_one()
             if statusDict['real_ForkStatus'] == 1:
-                self.AGV_subOperationDone = True
+                self.AGV_operationDone = True
 
         # 叉架下降
         elif operation == "release":
@@ -219,16 +222,10 @@ class NavRun(object):
 
             statusDict = statusCollection.find_one()
             if statusDict['real_ForkStatus'] == 2:
-                self.AGV_subOperationDone = True
+                self.AGV_operationDone = True
 
         # 人工放行
         elif operation == "manual":
-
-            # 人工放行先置为false
-            # statusDict = statusCollection.find_one()
-            # condition = {"_id": statusDict["_id"]}
-            # statusCollection.update_one(condition, {"$set": {"manual": False}})
-
             # change database
             navtask_info = {"task_run_status": MANAUL}
             navtaskDict = NavtaskCollection.find_one()
@@ -239,7 +236,7 @@ class NavRun(object):
             statusDict = statusCollection.find_one()
             if statusDict["manual"]:
                 self.sound = True
-                self.AGV_subOperationDone = True
+                self.AGV_operationDone = True
                 # change database
                 navtask_info = {"task_run_status": RUNNING}
                 navtaskDict = NavtaskCollection.find_one()
@@ -258,7 +255,7 @@ class NavRun(object):
 
         # 无操作
         elif operation == "none":
-            self.AGV_subOperationDone = True
+            self.AGV_operationDone = True
 
         # 自动充电
         elif operation == "charge":
@@ -268,7 +265,7 @@ class NavRun(object):
             for i in range(0,5):
                 self.Charge_pub.publish(self.chargemsg)
                 time.sleep(0.5)
-            self.AGV_subOperationDone = True
+            self.AGV_operationDone = True
             setCollection.update_one({}, {"$set": {"charge_do_open": True}})
 
         # 延时等待
@@ -278,20 +275,17 @@ class NavRun(object):
                 self.wait_time_trigger = False
             if self.wait_time == 0:
                 self.wait_time_trigger = True
-                self.AGV_subOperationDone = True
+                self.AGV_operationDone = True
             else:
                 time.sleep(1)
                 self.wait_time -= 1
         return True
 
 
-
     def Make_Action(self):
         """ the callback of "do_operation" state """
-        # do operation
-        # self.Action_Detail()
         # operation achieve
-        self.AGV_subOperationDone = False
+        self.AGV_operationDone = False
         # change the database
         self.AGV_stationIndex += 1
         if self.AGV_stationIndex == len(self.AGV_stationList) - 1:
@@ -330,108 +324,65 @@ class NavRun(object):
                     # 取消当前任务
                     navDict = NavtaskCollection.find_one()
                     NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
-                    # self.wait_for_charge()
                     return True
+                
             # change statu from do_operation to run_to_next_station
             self.send_start()
             return True
 
 
-    def Publish_Path(self, pathData):
-        pathMsg = Path()
-        pathMsg.header.seq = self.seq
-        pathMsg.header.stamp = rospy.Time.now()
-        pathMsg.header.frame_id = "path"
-        pathPointCount = 0
+    def First_Station(self, first_station:str):
+        """执行第一个点逻辑
 
-        for i in range(len(pathData)):
-            pathPoint = PoseStamped()
-            pathPoint.header.seq = pathPointCount
-            pathPoint.header.stamp = rospy.Time.now()
-            pathPoint.pose.position.x = pathData[i]["x"]
-            pathPoint.pose.position.y = pathData[i]["y"]
-            if pathData[i]["theta"] == "-999":
-                pathPoint.pose.orientation.w = -999
-            else:
-                quat = euler2quat(0,0,pathData[i]["theta"])
-                pathPoint.pose.orientation.w = quat[0]
-                pathPoint.pose.orientation.x = quat[1]
-                pathPoint.pose.orientation.y = quat[2]
-                pathPoint.pose.orientation.z = quat[3]
-            pathMsg.poses.append(pathPoint)
-            pathPointCount += 1
-
-        for _ in range(15):  #必须多发几遍，不然发不出去
-            self.path_pub.publish(pathMsg)
-            print("publish path msg")
-            time.sleep(0.05)
-
-
-    def Send_Message(self):
-        """ the callback of "run_to_next_station" state """
-        # 如果前一个站点和当前站点相同且不是第一个点，则不下发路径
-        if self.AGV_stationIndex != -1 and self.AGV_subStationList[self.AGV_subStationIndex] == self.AGV_subStationList[(self.AGV_subStationIndex+1)%len(self.AGV_subStationList)]:
-            self.send_off()
-            NavtaskDict = NavtaskCollection.find_one()
-            task_info = {"tracking_end":True}
-            NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
-        else:
-            # send param to mpc
-            configDict = configCollection.find_one()
-            statusDict = statusCollection.find_one()
-            if statusDict["real_ForkStatus"] == 1:
-                rospy.set_param('/ape_tracking/para_L',configDict["body_param"]["lift_wheelbase"]/1000)
-            else:
-                rospy.set_param('/ape_tracking/para_L',configDict["body_param"]["unlift_wheelbase"]/1000)
-
-            # 1. get the path from current position to the next station
-            pathData = self.GetPathData(self.AGV_subStationList[self.AGV_subStationIndex],
-                                        self.AGV_subStationList[(self.AGV_subStationIndex+1)%len(self.AGV_subStationList)])
-
-            # 2. send the path data to topic '/APETrack/Path'
-            rospy.wait_for_service('/APETrack/Pause') # confirm the tracking node is alive
-            self.Publish_Path(pathData)
-
-            # 3. change state from "run_to_next_station" to "wait_for_tracking"
-            self.send_off()
-
-
-    def Get_Path(self):
-        """ the callback of "run_to_next_station" state """
-        # 1. get the path from current position to the next station
-        self.AGV_subStationIndex = 0
-        # 1.1 judge the first station
-        if self.AGV_stationIndex == -1:
-            # 判断是否在已有站点上
-            status_Dict = statusCollection.find_one()
-            pos_current = {"x":status_Dict["x"], "y":status_Dict["y"], "angle":status_Dict["angle"]}
-            station_start, first_distance, first_angle = Station_Match(pos_current)
-            print("station is {}, distance is {}".format(station_start, first_distance))
-            self.AGV_subStationList = Station_BFS(station_start,
-                                            self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)], self.maps)
-            # 判断任务连第一个点的执行路径上的第一个点与当前车辆的距离，如果满足条件，则说明车辆在该站点上
+        Args:
+            station (str): 第一个站点
+        """
+        # 寻找当前位置最近的站点
+        status_Dict = statusCollection.find_one()
+        pos_current = {"x":status_Dict["x"], "y":status_Dict["y"], "angle":status_Dict["angle"]}
+        current_station, first_distance, first_angle = Station_Match(pos_current)
+        print("station is {}, distance is {}".format(current_station, first_distance))
+        
+        if current_station == first_station:
+            # 判断AGV当前位置是否在任务链第一个点上
             if first_distance <= 0.25 and first_angle <= 10:
-                # 判断最近的站点是否就是任务链第一个点
-                if station_start == self.AGV_subStationList[-1]:
-                    # 直接到位
-                    self.send_off()
-                    NavtaskDict = NavtaskCollection.find_one()
-                    task_info = {"tracking_end":True}
-                    NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
-                    return False
-            # 如果不满足条件，则应该先上到这个站点
+                return True
+            # 如果不在，则需要下发一条直线
             else:
-                # same station??
-                if self.AGV_subStationList[0] != self.AGV_subStationList[1]:
-                    self.AGV_subStationList.insert(0, self.AGV_subStationList[0])
-        # 1.2 find the avaliable path
+                return [current_station, first_station]
+        # 如果不满足条件，则应该先寻路上到这个站点
         else:
-            self.AGV_subStationList = Station_BFS(self.AGV_stationList[self.AGV_stationIndex],
-                                            self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)], self.maps)
+            return self.Find_Path_List(current_station, first_station)
 
+
+    def Find_Path_List(self, start_station:str, stop_station:str) ->list:
+        """找到一条任务链的路径列表
+        1. 找到当前位置最近站点
+        2. 从最近站点开始，找到任务链的路径列表
+
+        Args:
+            start_station (str): 起始站点
+            stop_station (str): 目标站点
+
+        Returns:
+            list: 站点列表
+        """
+        # 寻找当前位置最近的站点
+        status_Dict = statusCollection.find_one()
+        pos_current = {"x":status_Dict["x"], "y":status_Dict["y"], "angle":status_Dict["angle"]}
+        current_station, first_distance, first_angle = Station_Match(pos_current)
+        print("station is {}, distance is {}".format(current_station, first_distance))
+        
+        if current_station == start_station:
+            # 如果当前位置最近站点就是起始站点，则直接返回任务链的路径列表
+            station_list = Station_BFS(start_station, stop_station, self.maps)
+        else:
+            # 如果当前位置最近站点不是起始站点，则需要先到达当前位置最近站点
+            to_start_list = Station_BFS(current_station, start_station, self.maps)
+            station_list = to_start_list[:-1] + Station_BFS(start_station, stop_station, self.maps)
 
         # 增加路径不存在的异常保护
-        if len(self.AGV_subStationList) < 2:
+        if len(station_list) < 2:
             # 增加error
             Add_Error_DB("Navigation Error")
             # 播放报错语音
@@ -442,8 +393,226 @@ class NavRun(object):
             # 直接退出程序
             return False
 
+        return station_list
 
-        self.Send_Message()
+
+    def Position_Info(self, station:str, station_list:list):
+        """给定站点和路径列表，返回站点的位置信息
+
+        Args:
+            station (str): 站点
+            station_list (list): 站点列表
+
+        Returns:
+            站点位置信息
+        """
+
+        station_info = PositionInfo()
+        for item in station_list:
+            if item["instanceName"] == station:
+                station_info.x = item["pos"]["x"]
+                station_info.y = item["pos"]["y"]
+                station_info.theta = item["dir"]
+                ignoreDir = item["ignoreDir"]
+        return station_info, ignoreDir
+
+
+    def GetPathData(self, station_start: str, station_stop: str, pathMsg):
+        """返回每段路径的topic格式
+
+        Args:
+            station_start (str): 起始站点
+            station_stop (str): 目标站点
+            pathMsg (_type_): topic类型变量，存放路径数据
+
+        Returns:
+            topic格式的路径数据
+        """
+        configDict = configCollection.find_one()
+        teachFlag = configDict["plan_type"]
+        # 人工示教方案
+        if teachFlag:
+            # 导入地图
+            with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
+                pathSamp = json.load(f)
+
+            # topic初始化
+            pathMsg.lineType = 4
+            pathMsg.speedLimit = 0.4
+
+            # 起始终止站点信息
+            station_list = pathSamp["advancedPointList"]
+            pathMsg.startPointPosition, _ = self.Position_Info(station_start, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(station_stop, station_list)
+            pathMsg.startPointID = station_start
+            pathMsg.endPointID = station_stop
+
+            # 途径路径点信息
+            path_dict = pathSamp["demonstrationPathList"]
+
+            for item in path_dict:
+                if item["startPos"]["instanceName"] == station_start and item["endPos"]["instanceName"] == station_stop:
+                    pathMsg.index = item["instanceName"]
+                    pathMsg.controlPointsCnt = len(item["points"])
+                    middlePoint = []
+                    anyPoint = PositionInfo()
+                    for point in item["points"]:
+                        anyPoint.x = point["x"]
+                        anyPoint.y = point["y"]
+                        middlePoint.append(anyPoint)
+                    pathMsg.controlPoints = middlePoint
+    
+                    break
+            return pathMsg
+
+        # 路径规划方案
+        else:
+            # 导入地图
+            with open(PATH_MAP + USER_PATH_MAP_NAME, "r", encoding="utf8") as f:
+                path_dict = json.load(f)
+
+            # topic初始化
+            pathMsg.speedLimit = 0.4
+
+            # 起始终止站点信息
+            station_list = path_dict["advancedPointList"]
+            pathMsg.startPointPosition, _ = self.Position_Info(station_start, station_list)
+            pathMsg.endPointPosition, ignoreDir = self.Position_Info(station_stop, station_list)
+            pathMsg.startPointID = station_start
+            pathMsg.endPointID = station_stop
+            pathMsg.ignoreDir = ignoreDir
+
+            # 途径路径点信息
+            path_dict = path_dict["advancedCurveList"]
+            for item in path_dict:
+                if item["startPos"]["instanceName"] == station_start and item["endPos"]["instanceName"] == station_stop:
+                    pathMsg.index = item["instanceName"]
+                    # 路径方向信息
+                    for dict_item in item["property"]:
+                        if dict_item["key"] == "direction":
+                            pathMsg.direction = dict_item["int32Value"]
+                    if item["className"] == "BezierPath":
+                        pathMsg.controlPointsCnt = 2
+                        pathMsg.lineType = 3
+                        middlePoint = []
+                        anyPoint = PositionInfo()
+                        for point in [item["controlPos1"], item["controlPos2"]]:
+                            anyPoint.x = point["x"]
+                            anyPoint.y = point["y"]
+                            middlePoint.append(anyPoint)
+                        pathMsg.controlPoints = middlePoint
+                    else:
+                        pathMsg.lineType = 1
+                        pathMsg.controlPointsCnt = 0
+    
+                    break
+            return pathMsg
+        
+
+    def Publish_Path(self, pathData:list):
+        """将找到的站点按照topic格式依次发布
+
+        Args:
+            pathData (list): 路径站点列表
+        """
+        print(pathData)
+        for i in range(0, len(pathData)-1):
+            pathMsg = PathSegment()
+            self.seq += 1
+            pathMsg.sequenceID = self.seq
+            if pathData[i] == pathData[i+1]:
+                pathMsg = self.Create_Line(pathData[i+1], pathMsg)
+            else:
+                pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
+
+            while self.seq_received != self.seq: #等待control收到信息
+                self.path_pub.publish(pathMsg)
+                print("publish path msg")
+                print(self.seq)
+                time.sleep(0.05)
+        
+        
+    def Create_Line(self, station:str, pathMsg):
+        """创建从当前点到目标站点的直线路径
+
+        Args:
+            station (str): 站点
+            pathMsg (type): topic类型变量，存放路径数据
+
+        Returns:
+            直线的topic格式
+        """
+        # topic初始化
+        pathMsg.lineType = 1
+        pathMsg.speedLimit = 0.4
+        pathMsg.controlPointsCnt = 0
+        pathMsg.index = "current-{}".format(station)
+
+        # 创建起始点
+        status_Dict = statusCollection.find_one()
+        station_start = PositionInfo()
+        station_start.x = status_Dict["x"]
+        station_start.y = status_Dict["y"]
+        station_start.theta = status_Dict["angle"]
+        pathMsg.startPointPosition = station_start
+        pathMsg.startPointID = "current_position"
+        
+        configDict = configCollection.find_one()
+        teachFlag = configDict["plan_type"]
+        # 人工示教方案
+        if teachFlag:
+            # 导入地图
+            with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
+                pathSamp = json.load(f)
+
+            # 寻找目标点
+            station_list = pathSamp["advancedPointList"]
+            pathMsg.endPointPosition = self.Position_Info(station, station_list)
+            pathMsg.endPointID = station
+
+        # 路径规划方案
+        else:
+            # 导入地图
+            with open(PATH_MAP + USER_PATH_MAP_NAME, "r", encoding="utf8") as f:
+                path_dict = json.load(f)
+
+            # 寻找目标点
+            station_list = path_dict["advancedPointList"]
+            pathMsg.endPointPosition = self.Position_Info(station, station_list)
+            pathMsg.endPointID = station
+ 
+        return pathMsg
+    
+
+    def Send_Message(self):
+        """每到达一个目标站点需要进行下一步路径点发送的操作
+            callback of "send_start" state
+        """
+        # 如果是第一个站点，则需要执行第一个点的逻辑
+        if self.AGV_stationIndex == -1:
+            station_list = self.First_Station(self.AGV_stationList[0])
+            if station_list == True:
+                # 说明当前就在第一个点上，直接到位
+                self.send_off()
+                NavtaskDict = NavtaskCollection.find_one()
+                task_info = {"tracking_end":True}
+                NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
+                return True
+        else:
+            # 判断下一个站点是否与当前站点相同，如果相同则不下发路径
+            if self.AGV_stationList[self.AGV_stationIndex] == self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)]:
+                self.send_off()
+                NavtaskDict = NavtaskCollection.find_one()
+                task_info = {"tracking_end":True}
+                NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
+                return True
+            else:
+                station_list = self.Find_Path_List(self.AGV_stationList[self.AGV_stationIndex], 
+                                                   self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)])
+        # send the path data to tracking topic
+        self.Publish_Path(station_list)
+        # change state from "run_to_next_station" to "wait_for_tracking"
+        self.send_off()
 
 
     def Complete_Task(self):
@@ -480,133 +649,6 @@ class NavRun(object):
     def In_Change_Log(self):
         """ print the in state """
         print("To {}".format(self.machine.get_model_state(self).name))
-
-
-    def GetPathData(self, station_start, station_stop):
-        """ with the planning algorithm
-            @ return: the path point list from current position to the station
-        """
-        configDict = configCollection.find_one()
-        teachFlag = configDict["plan_type"]
-        # 人工示教方案
-        if teachFlag:
-            with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
-                pathSamp = json.load(f)
-
-            # 首先到达第一个站点，获取第一个站点位置
-            # if self.AGV_stationIndex == -1:
-            if station_start == station_stop:
-                rospy.set_param('/ape_tracking/teach_flag',0)
-                station_list = pathSamp["advancedPointList"]
-                for item in station_list:
-                    if item["instanceName"] == station_stop:
-                        statusDict = statusCollection.find_one()
-                        station_pos = item["pos"]
-                        station_pos.update({"theta": item["dir"]})
-                        pathData = [{"x": statusDict["x"], "y": statusDict["y"], "theta": 0}, station_pos]
-
-                        # 判断去往第一个点应该倒走还是正走
-                        theta1 = math.atan2(pathData[1]["y"] - pathData[0]["y"], pathData[1]["x"] - pathData[0]["x"])
-                        theta2 = theta1 - pathData[1]["theta"]
-                        if theta2 > math.pi:
-                            theta2 -= 2*math.pi
-                        elif theta2 < -math.pi:
-                            theta2 += 2*math.pi
-                        if theta2 <= math.pi/2 and theta2 >= -math.pi/2:
-                            rospy.set_param('/ape_tracking/reverse_flag',0)
-                        else:
-                            rospy.set_param('/ape_tracking/reverse_flag',1)
-                        break
-
-            else:
-                rospy.set_param('/ape_tracking/teach_flag',1)
-                path_dict = pathSamp["demonstrationPathList"]
-                for item in path_dict:
-                    if item["startPos"]["instanceName"] == station_start and item["endPos"]["instanceName"] == station_stop:
-                        pathData = item["points"]
-                        break
-
-            print(pathData)
-            return pathData
-
-        # 路径规划方案
-        else:
-            # 是否使用调节方式
-            if "AP" in station_stop or "CP" in station_stop:
-                rospy.set_param("/ape_tracking/regulation_flag", 1)
-            else:
-                rospy.set_param("/ape_tracking/regulation_flag", 0)
-            rospy.set_param('/ape_tracking/teach_flag',0)
-            with open(PATH_MAP + USER_PATH_MAP_NAME, "r", encoding="utf8") as f:
-                path_dict = json.load(f)
-
-            station_list = path_dict["advancedPointList"]
-            path_dict = path_dict["advancedCurveList"]
-            # 首先到达第一个站点，获取第一个站点位置
-            # if self.AGV_stationIndex == -1:
-            if station_start == station_stop:
-                for item in station_list:
-                    if item["instanceName"] == station_stop:
-                        statusDict = statusCollection.find_one()
-                        station_pos = item["pos"]
-                        if item["ignoreDir"] or self.AGV_subStationIndex != len(self.AGV_subStationList) - 2:
-                            station_pos.update({"theta": "-999"})
-                            print("dir is -999")
-                        else:
-                            station_pos.update({"theta": item["dir"]})
-                        pathData = [{"x": statusDict["x"], "y": statusDict["y"], "theta": statusDict["angle"]}, station_pos]
-
-                        # 判断去往第一个点应该倒走还是正走
-                        theta1 = math.atan2(pathData[1]["y"] - pathData[0]["y"], pathData[1]["x"] - pathData[0]["x"])
-                        if pathData[1]["theta"] == "-999":
-                            theta2 = theta1 - pathData[0]["theta"]
-                        else:
-                            theta2 = theta1 - pathData[1]["theta"]
-                        print("theta1 is {}".format(theta1))
-                        print("theta2 is {}".format(theta2))
-                        if theta2 > math.pi:
-                            theta2 -= 2*math.pi
-                        elif theta2 < -math.pi:
-                            theta2 += 2*math.pi
-                        if theta2 <= math.pi/2 and theta2 >= -math.pi/2:
-                            rospy.set_param('/ape_tracking/reverse_flag',0)
-                        else:
-                            rospy.set_param('/ape_tracking/reverse_flag',1)
-                        break
-
-            # 寻找点到点之间的数据
-            else:
-                for item in path_dict:
-                    if item["startPos"]["instanceName"] == station_start and item["endPos"]["instanceName"] == station_stop:
-                        for station in station_list:
-                            if station["instanceName"] == station_stop:
-                                # 途径点不需要发送角度
-                                if station["ignoreDir"] or self.AGV_subStationIndex != len(self.AGV_subStationList) - 2:
-                                    dir = "-999"
-                                else:
-                                    dir = station["dir"]
-
-                        theta_dict = {"theta":0}
-                        theta_pos = {"theta":dir}
-                        # 首先使叉尖到达库位点车头的位置
-                        if "AP" in station_stop:
-                            item["endPos"]["pos"]['x'] = item["endPos"]["pos"]['x'] + 1.4*math.cos(dir)
-                            item["endPos"]["pos"]['y'] = item["endPos"]["pos"]['y'] + 1.4*math.sin(dir)
-
-                        if item["className"] == "StraightPath":
-                            pathData = [dict(item["startPos"]["pos"],**theta_dict), dict(item["endPos"]["pos"],**theta_pos)]
-                        else:
-                            pathData = [dict(item["startPos"]["pos"],**theta_dict), dict(item["controlPos1"], **theta_dict), dict(item["controlPos2"],**theta_dict), dict(item["endPos"]["pos"],**theta_pos)]
-
-                        if item["property"][0]["int32Value"] == 1:
-                            #set param
-                            rospy.set_param('/ape_tracking/reverse_flag',1)
-                        else:
-                            rospy.set_param('/ape_tracking/reverse_flag',0)
-                        break
-
-            print(pathData)
-            return pathData
 
 
     def __del__(self):

@@ -24,6 +24,8 @@ from utils import tool
 
 import pymongo
 
+from ape_single.msg import ManualParameter
+
 # ------------------------ init data ----------------------------- #
 
 AGV_nav = Navigation()
@@ -217,6 +219,10 @@ class Bottom_Operation(object):
         # 低电量预警时间戳
         self.time_stamp = time.time()
 
+        # 手动控制
+        self.manualParameterMsg = ManualParameter()
+        self.manual_pub = rospy.Publisher('/APE_Control/maunalCmd', ManualParameter, queue_size=10)
+
     def dataDictUpdate(self):
         self.configDict = configCollection.find_one()
         self.setDict = setCollection.find_one()
@@ -256,17 +262,37 @@ class Bottom_Operation(object):
                 configCollection.update_one({"_id": self.configDict["_id"]}, {'$set' : {"avoid_set": True}})
                     
 
-    def veloPub(self):
+    def manualPub(self):
         set_info = {}
         if not self.setDict["nav_start"]:
+            # 速度和角度
             speed = self.setDict["set_VelocityVel"]
             wheelAngle = self.setDict["set_WheelAngle"]
             APEVeloMsg.linear.x = abs(speed)
             wheelAngle = 180 * wheelAngle
             if speed < 0:
                 wheelAngle = wheelAngle - 180
-            APEVeloMsg.angular.z = wheelAngle
-            APEVeloPub.publish(APEVeloMsg)
+            
+            # 货叉
+            direction = self.setDict["set_ForkStatus"]
+            if direction == 0:
+                self.manualParameterMsg.forkCommand = 1
+            elif direction == 1:
+                self.manualParameterMsg.forkCommand = 2
+
+            statusDict = statusCollection.find_one()
+            if statusDict["manualAuto"] == 0 and (not self.setDict["nav_start"]):
+                set_info = {
+                    "set_ForkStatus": statusDict["real_ForkStatus"] - 1
+                }
+            setCollection.update_one({}, {'$set' : set_info})
+
+            # 发布topic
+            self.manualParameterMsg.motorSpeed1 = self.setDict["set_VelocityVel"]
+            self.manualParameterMsg.steeringAngle1 = wheelAngle
+            self.manual_pub.publish(self.manualParameterMsg)
+            # APEVeloMsg.angular.z = wheelAngle
+            # APEVeloPub.publish(APEVeloMsg)
             set_info["set_VelocityVel"] = 0
             set_info["set_WheelAngle"] = 0
             setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
@@ -516,8 +542,7 @@ class Bottom_Operation(object):
     def doOperation(self):
         self.dataDictUpdate()
         self.avoidPub()
-        self.veloPub()
-        self.pumpPub()
+        self.manualPub()
         self.Update_Worktime()
 
         self.pathconvert()

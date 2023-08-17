@@ -1,3 +1,3 @@
-int16 status
+uint8 status # 0表示暂停，1表示恢复，2表示取消
 ---
 bool success

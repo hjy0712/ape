@@ -84,3 +84,13 @@ SMAPDATA = {
         "advancedPointList": [],
         "demonstrationPathList": [],
     }
+
+# control node name
+CONTROL_NODE_NAME = "control_node"
+# control service name
+CONTROL_TASK_SERVICE_NAME = "/APE_Task/taskStatus"
+CONTROL_TRACK_SERVICE_NAME = "/APE_Task/trackStatus"
+# control topic name
+CONTROL_PATH_TOPIC_NAME = "/APE_Task/trackPath"
+CONTROL_SEQ_TOPIC_NAME = "/APE_Task/seqID"
+CONTROL_MODE_TOPIC_NAME = "/APE_Control/mode"

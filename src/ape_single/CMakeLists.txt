@@ -48,15 +48,22 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 # Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   APE_Message.msg
-# )
+add_message_files(
+  FILES
+  ManualParameter.msg
+  MotionParameter.msg
+  MotorInfo.msg
+  NavigationInfo.msg
+  PathSegment.msg
+  PositionInfo.msg
+  VehicleParameter.msg
+)
 
 # Generate services in the 'srv' folder
 add_service_files(
   FILES
   TaskStatus.srv
+  # TrackStatus.srv
 )
 
 ## Generate actions in the 'action' folder

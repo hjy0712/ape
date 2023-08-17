@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import rospy
-from transforms3d.euler import euler2quat
-from std_srvs.srv import SetBool,SetBoolResponse
 from std_srvs.srv import Empty, EmptyResponse
+from std_msgs.msg import Bool
 
 from configs.config_path import *
 from utils import tool
@@ -17,6 +16,14 @@ import time, json
 
 from utils.app_service.generic_func import *
 
+from ape_single.msg import MotionParameter
+# from ape_single.msg import MotorInfo
+# from ape_single.msg import NavigationInfo
+# from ape_single.msg import PositionInfo
+from ape_single.msg import VehicleParameter
+
+from ape_single.srv import TaskStatus
+
 # data handle
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 # database
@@ -27,9 +34,6 @@ setCollection = apeDB["ape_set_collection"]
 IdletaskCollection = apeDB["ape_Idletask_collection"]
 RestoretaskCollection = apeDB["ape_Restoretask_collection"]
 configCollection = apeDB["ape_config_collection"]
-
-PAUSE = True
-RESTART = False
 
 
 class NavTask(object):
@@ -64,8 +68,9 @@ class NavTask(object):
         self.machine.add_transition('complete', 'start', 'idle',
                          after=['In_Change_Log', "Complete_Nav"], before='Out_Change_Log')
 
-        self.Tracking_Sever = rospy.Service('tracking_status', Empty, self.handle_tracking)
+        self.Tracking_Sever = rospy.Service(CONTROL_TRACK_SERVICE_NAME, Empty, self.handle_tracking)
 
+        self.Mode_Topic = rospy.Publisher(CONTROL_MODE_TOPIC_NAME, Bool, queue_size = 10)
 
 
     def handle_tracking(self, req):
@@ -75,8 +80,6 @@ class NavTask(object):
         NavtaskDict = NavtaskCollection.find_one()
         task_info = {"tracking_end":True}
         NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
-
-
         return EmptyResponse()
 
 
@@ -95,14 +98,9 @@ class NavTask(object):
 
         print("The navigation is start")
 
-        # start tracking node
-        # tool.Run_ShellCmd("rosrun ape_tracking PID_tracking.py")
-        node_list = tool.Ros_Get_NodeList()
-        if "/feedback_controller" in node_list:
-            pass
-        else:
-            tool.Run_ShellCmd("rosrun ape_tracking run_feedback")
-
+        modeType = Bool()
+        modeType.data = True
+        self.Mode_Topic.publish(modeType)
         taskDict = NavtaskCollection.find_one()
         # 初始下发任务时，如果给定当前站点为0，则需要执行到第一个站点逻辑
         # if taskDict["current_run_time"] == 0 and taskDict["current_station_index"] == 0:
@@ -110,23 +108,8 @@ class NavTask(object):
             AGV_stationIndex = -1
         else:
             AGV_stationIndex = taskDict["current_station_index"]
-        # AGV_stationIndex = taskDict["current_station_index"]
 
-        # send param to /feedback_controller
-        node_list = tool.Ros_Get_NodeList()
-        while "/feedback_controller" not in node_list:
-            node_list = tool.Ros_Get_NodeList()
-
-        configDict = configCollection.find_one()
-        rospy.set_param('/ape_tracking/para_d',configDict["body_param"]["center_deviation"])
-        rospy.set_param('/ape_tracking/para_delta0',configDict["body_param"]["zero_position"])
-        rospy.set_param('/ape_tracking/mpc_para_w_pos',configDict["motion_param"]["position_track_accuracy"])
-        rospy.set_param('/ape_tracking/mpc_para_w_theta',configDict["motion_param"]["angle_track_accuracy"])
-        rospy.set_param('/ape_tracking/mpc_para_max_vel',configDict["motion_param"]["max_speed"])
-        rospy.set_param('/ape_tracking/mpc_para_max_acc',configDict["motion_param"]["max_acceleration"])
-        rospy.set_param('/ape_tracking/mpc_para_max_omega',configDict["motion_param"]["max_wheel_angular_speed"])
-        rospy.set_param('/ape_tracking/para_path_discrete',configDict["motion_param"]["path_discrete"])
-
+        # 运行子状态机
         self.apeRun = NavRun("ape_run", taskDict["station_list"], taskDict["operation_list"],
                     AGV_stationIndex, taskDict["given_run_time"], taskDict["current_run_time"])
         self.apeRun.send_start()
@@ -138,11 +121,18 @@ class NavTask(object):
         if self.apeRun != None:
             self.apeRun.stop_action = True
         # send to tracking service, pause
-        rospy.wait_for_service('/APETrack/Pause')
+        node_list = tool.Ros_Get_NodeList()
         try:
-            PauseTracking = rospy.ServiceProxy('/APETrack/Pause', SetBool)
-            resp1 = PauseTracking(PAUSE)
+            if CONTROL_NODE_NAME in node_list:
+                rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
+                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                resp1 = PauseTracking(0)
+                return resp1.success
+            else:
+                raise Exception("service dead")
         except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+        except Exception as e:
             print("Service call failed: %s"%e)
 
 
@@ -155,13 +145,16 @@ class NavTask(object):
         # send to tracking service, restart
         node_list = tool.Ros_Get_NodeList()
         try:
-            if "/feedback_controller" in node_list:
-                rospy.wait_for_service('/APETrack/Pause')
-                PauseTracking = rospy.ServiceProxy('/APETrack/Pause', SetBool)
-                resp1 = PauseTracking(RESTART)
+            if CONTROL_NODE_NAME in node_list:
+                rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
+                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                resp1 = PauseTracking(1)
+                return resp1.success
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+        except Exception as e:
             print("Service call failed: %s"%e)
 
 
@@ -170,32 +163,27 @@ class NavTask(object):
 
         # 关闭轨迹跟踪
         node_list = tool.Ros_Get_NodeList()
-        if "/feedback_controller" in node_list:
-            # send to tracking service, pause
-            # rospy.wait_for_service('/APETrack/Pause')
-            # try:
-            #     PauseTracking = rospy.ServiceProxy('/APETrack/Pause', SetBool)
-            #     resp1 = PauseTracking(PAUSE)
-            # except rospy.ServiceException as e:
-            #     print("Service call failed: %s"%e)
-
-            tool.Run_ShellCmd("rosnode kill /feedback_controller")
-            # 确保mpc关闭
-            node_list = tool.Ros_Get_NodeList()
-            while "/feedback_controller" in node_list:
-                node_list = tool.Ros_Get_NodeList()
-
-
-
-        # kill the tracking node
-        # tool.Run_ShellCmd("rosnode kill /stupid_tracking")
-        # SetDict = setCollection.find_one()
-        # if not SetDict["need_to_charge"]:
-
+        try:
+            if CONTROL_NODE_NAME in node_list:
+                rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
+                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                resp1 = PauseTracking(2)
+                return resp1.success
+            else:
+                raise Exception("service dead")
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+        except Exception as e:
+            print("Service call failed: %s"%e)
 
         # finish navtaskrun's state machine
         del self.apeRun
         self.apeRun = None
+
+        # 切换模式
+        modeType = Bool()
+        modeType.data = False
+        self.Mode_Topic.publish(modeType)
 
         # 切换速度控制权
         setDict = setCollection.find_one()
@@ -205,9 +193,6 @@ class NavTask(object):
 
     def Complete_Nav(self):
         print("The navigation is completed")
-
-        # kill the tracking node
-        # tool.Run_ShellCmd("rosnode kill /stupid_tracking")
 
         # finish navtaskrun's state machine
         del self.apeRun
@@ -233,20 +218,46 @@ class NavTask(object):
             NavtaskCollection.update_one(condition, {'$set': navtask_Info})
 
         else:
+            # 切换模式
+            modeType = Bool()
+            modeType.data = False
+            self.Mode_Topic.publish(modeType)
+            
             # 切换速度控制权
             setDict = setCollection.find_one()
             condition = {"_id": setDict["_id"]}
             setCollection.update_one(condition, {'$set' : {"nav_start": False, "nav_idletask_run": False}})
-            # 关闭轨迹跟踪
-            node_list = tool.Ros_Get_NodeList()
-            if "/feedback_controller" in node_list:
-                tool.Run_ShellCmd("rosnode kill /feedback_controller")
-                # 确保mpc关闭
-                node_list = tool.Ros_Get_NodeList()
-                while "/feedback_controller" in node_list:
-                    node_list = tool.Ros_Get_NodeList()
 
-import sys, errno
+import errno
+
+def Config_Init():
+    """初始化配置参数
+    1. vehicleParameter
+    2. MotionParameter
+    """
+    # vehicleParameterMsg = VehicleParameter()
+
+    # vehicleParameterPub = rospy.Publisher('/APE_VehicleParameter', vehicleParameterMsg, queue_size=10)
+    # # send config topic
+    # # 参数部分还需确认，每个参数在刚开机的时候发一次，在前端修改参数之后触发发送一次
+    # configDict = configCollection.find_one()
+    # vehicleParameterMsg.wheelX = configDict["body_param"]["unlift_wheelbase"]
+    # vehicleParameterMsg.wheelY = 0 # 没有此参数，等待整理
+    # vehicleParameterMsg.wheelXCargo = configDict["body_param"]["lift_wheelbase"]
+    # vehicleParameterMsg.controlPointX = configDict["body_param"]["zero_position"]
+    # vehicleParameterMsg.wheelZeroBiasForward1 = configDict["body_param"]["center_deviation"]
+    # vehicleParameterMsg.wheelZeroBiasBackward1 = 0 # 没有此参数，等待整理
+    # vehicleParameterMsg.RotationSteerAngle = 0 # 没有此参数，等待整理
+    # vehicleParameterPub.publish(vehicleParameterMsg)
+    configDict = configCollection.find_one()
+    rospy.set_param('/APE_VehicleParameter/wheelX',configDict["body_param"]["unlift_wheelbase"])
+    rospy.set_param('/APE_VehicleParameter/wheelY',0) # 没有此参数，等待整理
+    rospy.set_param('/APE_VehicleParameter/wheelXCargo',configDict["body_param"]["lift_wheelbase"])
+    rospy.set_param('/APE_VehicleParameter/controlPointX',configDict["body_param"]["zero_position"])
+    rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',configDict["body_param"]["center_deviation"])
+    rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
+    rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
+
 
 if __name__ == "__main__":
     rospy.init_node("navigation_task")
@@ -303,24 +314,15 @@ if __name__ == "__main__":
             # 1.3 judge the tracking state
             if apeTask.apeRun != None:
                 if NavtaskDict["tracking_end"] and apeTask.apeRun.state == "wait_for_tracking":
-                    # print("tracking state")
-                    if apeTask.apeRun.AGV_subStationIndex == len(apeTask.apeRun.AGV_subStationList) - 2:
-                        # if stop is true, don't do action
-                        if not apeTask.apeRun.stop_action:
-                            # do operation
-                            apeTask.apeRun.Action_Detail()
-                            if apeTask.apeRun.AGV_subOperationDone:
-                                # update tracking status
-                                NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": {"tracking_end":False}})
-                                apeTask.apeRun.AGV_subStationIndex += 1
-                                # change statu from wait_for_tracking to do_operation
-                                apeTask.apeRun.station_reach()
-                    else:
-                        # update tracking status
-                        NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": {"tracking_end":False}})
-                        apeTask.apeRun.AGV_subStationIndex += 1
-                        # change statu from wait_for_tracking to run_to_next_station
-                        apeTask.apeRun.sub_station_reach()
+                    # if stop is true, don't do action
+                    if not apeTask.apeRun.stop_action:
+                        # do operation
+                        apeTask.apeRun.Action_Detail()
+                        if apeTask.apeRun.AGV_operationDone:
+                            # update tracking status
+                            NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": {"tracking_end":False}})
+                            # change statu from wait_for_tracking to do_operation
+                            apeTask.apeRun.station_reach()
 
             # 1.4 auto-charge
             # need_to_charge is a real-time change variable, if battery is low and auto-charge is open, the value of it is true
@@ -368,8 +370,6 @@ if __name__ == "__main__":
                         setCollection.update_one({"_id": SetDict["_id"]}, {"$set": {"finish_charge" : False}})
                 else:
                     setCollection.update_one({"_id": SetDict["_id"]}, {"$set": {"finish_charge" : False}})
-            # if SetDict["finish_charge"] and (apeTask.apeRun != None and apeTask.apeRun.state == "charge"):
-            #     apeTask.apeRun.charge_to_run()
 
 
 
@@ -377,8 +377,8 @@ if __name__ == "__main__":
             if e.errno == errno.EPIPE:
                 print("Broken Pipe: {}".format(e))
 
-        except Exception as e:
-            print("The state machine meeting error: {}".format(e))
+        # except Exception as e:
+        #     print("The state machine meeting error: {}".format(e))
 
 
     # 需要进行处理的部分
