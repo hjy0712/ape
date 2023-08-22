@@ -94,3 +94,6 @@ CONTROL_TRACK_SERVICE_NAME = "/APE_Task/trackStatus"
 CONTROL_PATH_TOPIC_NAME = "/APE_Task/trackPath"
 CONTROL_SEQ_TOPIC_NAME = "/APE_Task/seqID"
 CONTROL_MODE_TOPIC_NAME = "/APE_Control/mode"
+CONTROL_CMD_TOPIC_NAME = '/APE_Control/manualCmd'
+# confidence topic name
+TRUST_TOPIC_NAME = "/APE_Trust"

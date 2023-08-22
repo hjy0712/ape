@@ -138,6 +138,11 @@ def Lock_AGV():
             # 开启纯定位服务
             Ros_Pure_Location()
 
+            time.sleep(0.1)
+
+            # 开启置信度节点
+            tool.Run_ShellCmd("rosrun ape_single app_trust.py")
+
         statusDict = statusCollection.find_one()
         condition = {"_id": statusDict["_id"]}
         statusCollection.update_one(condition, {'$set' : {"start_Ctrl": True}})
@@ -168,7 +173,8 @@ def Reset_AGV():
         errorCollection.delete_many({})
         taskCollection.delete_many({})
 
-        # TODO: 删除保存的路线信息
+        # 杀掉置信度节点
+        tool.Run_ShellCmd("rosnode kill /trust_localization_node")
 
         # 删除map json
         with open(MAP+MAP_NAME, "w", encoding="utf8") as f:

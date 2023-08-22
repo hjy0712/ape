@@ -7,6 +7,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import UInt8
 from geometry_msgs.msg import Pose2D
 from cartographer_ros_msgs.msg import SubmapList
+from std_msgs.msg import Bool
 
 import math
 
@@ -221,7 +222,7 @@ class Bottom_Operation(object):
 
         # 手动控制
         self.manualParameterMsg = ManualParameter()
-        self.manual_pub = rospy.Publisher('/APE_Control/maunalCmd', ManualParameter, queue_size=10)
+        self.manual_pub = rospy.Publisher(CONTROL_CMD_TOPIC_NAME, ManualParameter, queue_size=10)
 
     def dataDictUpdate(self):
         self.configDict = configCollection.find_one()
@@ -268,10 +269,9 @@ class Bottom_Operation(object):
             # 速度和角度
             speed = self.setDict["set_VelocityVel"]
             wheelAngle = self.setDict["set_WheelAngle"]
-            APEVeloMsg.linear.x = abs(speed)
             wheelAngle = 180 * wheelAngle
-            if speed < 0:
-                wheelAngle = wheelAngle - 180
+            # if speed < 0:
+            #     wheelAngle = wheelAngle - 180
             
             # 货叉
             direction = self.setDict["set_ForkStatus"]
@@ -285,10 +285,10 @@ class Bottom_Operation(object):
                 set_info = {
                     "set_ForkStatus": statusDict["real_ForkStatus"] - 1
                 }
-            setCollection.update_one({}, {'$set' : set_info})
+                setCollection.update_one({}, {'$set' : set_info})
 
             # 发布topic
-            self.manualParameterMsg.motorSpeed1 = self.setDict["set_VelocityVel"]
+            self.manualParameterMsg.motorSpeed1 = speed
             self.manualParameterMsg.steeringAngle1 = wheelAngle
             self.manual_pub.publish(self.manualParameterMsg)
             # APEVeloMsg.angular.z = wheelAngle
@@ -382,6 +382,9 @@ class Bottom_Operation(object):
 
                 # 进行重定位
                 setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": {"relocation_start":True}})
+
+                # 打开置信度节点
+                tool.Run_ShellCmd("rosrun ape_single app_trust.py")
             
             set_info["map_convert_stop"] = False
             setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
@@ -552,7 +555,6 @@ class Bottom_Operation(object):
         self.Charge()
 
     
-    
 if __name__ == "__main__":
 
     # ------------------ init -------------------- #
@@ -574,7 +576,7 @@ if __name__ == "__main__":
     
     rate = rospy.Rate(5)
 
-        
+
     # ------------------ publish ----------------- #
 
     while not rospy.is_shutdown():

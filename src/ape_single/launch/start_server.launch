@@ -9,12 +9,14 @@
   <node pkg="ape_tracking" type="location_and_pose" name="tf_Pose_Publisher"/>
 <!-- app server node -->
   <node pkg="ape_single" type="app_link_bottom.py" name="ape_app_control" output="screen"/>
+<!-- app server node -->
+  <node pkg="motionControl" type="motionControl" name="motionControl" output="screen"/>
 <!-- map server node -->
   <!-- <node pkg="ape_single" type="app_map_server.py" name="convert_map"/> -->
 <!-- rosbridge server node -->
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 <!-- app trust node -->
-  <node pkg="ape_single" type="app_trust.py" name="trust_localization_node" output="screen"/>
+  <!-- <node pkg="ape_single" type="app_trust.py" name="trust_localization_node" output="screen"/> -->
 <!-- app navigation node -->
   <node pkg="ape_single" type="app_navigation_task.py" name="navigation_task" output="screen"/>
 </launch>

@@ -71,6 +71,11 @@ class NavTask(object):
         self.Tracking_Sever = rospy.Service(CONTROL_TRACK_SERVICE_NAME, Empty, self.handle_tracking)
 
         self.Mode_Topic = rospy.Publisher(CONTROL_MODE_TOPIC_NAME, Bool, queue_size = 10)
+        modeType = Bool()
+        modeType.data = False # 开始的时候置为手动模式
+        for i in range(0,5):
+            self.Mode_Topic.publish(modeType)
+            time.sleep(0.1)
 
 
     def handle_tracking(self, req):
@@ -272,6 +277,9 @@ if __name__ == "__main__":
     condition = {"_id": navtaskDict["_id"]}
     NavtaskCollection.update_one(condition, {'$set': navtask_info})
 
+    # 初始化参数
+    Config_Init()
+    
     set_info = {
         "nav_start" : False,
         "finish_charge" : False,

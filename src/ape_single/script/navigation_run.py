@@ -492,7 +492,7 @@ class NavRun(object):
                         if dict_item["key"] == "direction":
                             pathMsg.direction = dict_item["int32Value"]
                     if item["className"] == "BezierPath":
-                        pathMsg.controlPointsCnt = 2
+                        pathMsg.controlPointsCnt = 4
                         pathMsg.lineType = 3
                         middlePoint = []
                         anyPoint = PositionInfo()
@@ -503,7 +503,7 @@ class NavRun(object):
                         pathMsg.controlPoints = middlePoint
                     else:
                         pathMsg.lineType = 1
-                        pathMsg.controlPointsCnt = 0
+                        pathMsg.controlPointsCnt = 2
     
                     break
             return pathMsg
@@ -526,6 +526,7 @@ class NavRun(object):
                 pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
 
             while self.seq_received != self.seq: #等待control收到信息
+                print(pathMsg)
                 self.path_pub.publish(pathMsg)
                 print("publish path msg")
                 print(self.seq)
