@@ -180,7 +180,7 @@ class NavRun(object):
         # sequenceID
         self.seq = 0
         self.seq_received = 0
-        self.path_pub = rospy.Publisher(CONTROL_PATH_TOPIC_NAME,PathSegment, queue_size=1)
+        self.path_pub = rospy.Publisher(CONTROL_PATH_TOPIC_NAME,PathSegment, queue_size=10)
         self.seq_sub = rospy.Subscriber(CONTROL_SEQ_TOPIC_NAME, Int64, self.seqCallback)
 
 
@@ -343,16 +343,19 @@ class NavRun(object):
         current_station, first_distance, first_angle = Station_Match(pos_current)
         print("station is {}, distance is {}".format(current_station, first_distance))
         
-        if current_station == first_station:
-            # 判断AGV当前位置是否在任务链第一个点上
-            if first_distance <= 0.25 and first_angle <= 10:
+        # 判断AGV当前位置是否在站点上
+        if first_distance <= 0.25 and first_angle <= 10:
+            if current_station == first_station:
                 return True
-            # 如果不在，则需要下发一条直线
             else:
-                return [current_station, first_station]
-        # 如果不满足条件，则应该先寻路上到这个站点
+                return self.Find_Path_List(current_station, first_station)
+        # 如果不在，则需要下发一条直线
         else:
-            return self.Find_Path_List(current_station, first_station)
+            if current_station == first_station:
+                return [current_station, first_station]
+            # 如果不满足条件，则应该先寻路上到最近的站点
+            else:
+                return [current_station, current_station, first_station]
 
 
     def Find_Path_List(self, start_station:str, stop_station:str) ->list:
@@ -495,8 +498,8 @@ class NavRun(object):
                         pathMsg.controlPointsCnt = 4
                         pathMsg.lineType = 3
                         middlePoint = []
-                        anyPoint = PositionInfo()
                         for point in [item["controlPos1"], item["controlPos2"]]:
+                            anyPoint = PositionInfo()
                             anyPoint.x = point["x"]
                             anyPoint.y = point["y"]
                             middlePoint.append(anyPoint)
@@ -515,22 +518,25 @@ class NavRun(object):
         Args:
             pathData (list): 路径站点列表
         """
-        print(pathData)
-        for i in range(0, len(pathData)-1):
-            pathMsg = PathSegment()
-            self.seq += 1
-            pathMsg.sequenceID = self.seq
-            if pathData[i] == pathData[i+1]:
-                pathMsg = self.Create_Line(pathData[i+1], pathMsg)
-            else:
-                pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
+        try:
+            print(pathData)
+            for i in range(0, len(pathData)-1):
+                pathMsg = PathSegment()
+                self.seq += 1
+                pathMsg.sequenceID = self.seq
+                if pathData[i] == pathData[i+1]:
+                    pathMsg = self.Create_Line(pathData[i+1], pathMsg)
+                else:
+                    pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
 
-            while self.seq_received != self.seq: #等待control收到信息
-                print(pathMsg)
-                self.path_pub.publish(pathMsg)
-                print("publish path msg")
-                print(self.seq)
-                time.sleep(0.05)
+                while self.seq_received != self.seq: #等待control收到信息
+                    print(pathMsg)
+                    self.path_pub.publish(pathMsg)
+                    print("publish path msg")
+                    print(self.seq)
+                    time.sleep(0.1)
+        except Exception as e:
+            print("publish error: {}".format(str(e)))
         
         
     def Create_Line(self, station:str, pathMsg):
@@ -546,8 +552,10 @@ class NavRun(object):
         # topic初始化
         pathMsg.lineType = 1
         pathMsg.speedLimit = 0.4
-        pathMsg.controlPointsCnt = 0
+        pathMsg.controlPointsCnt = 2
         pathMsg.index = "current-{}".format(station)
+        pathMsg.ignoreDir = True #待修改
+        pathMsg.direction = False
 
         # 创建起始点
         status_Dict = statusCollection.find_one()
