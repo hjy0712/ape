@@ -1,14 +1,14 @@
 # root path
-ROOT_PATH = "/home/ape/APE_Application/src/ape_single/"
+ROOT_PATH = "/home/ape/aiten-server-py/src/ape_single/"
 
 # config json path
-ORIGIN_CONFIG_FILE = ROOT_PATH + "script/logs/default_ape_config.json"
+ORIGIN_CONFIG_FILE = ROOT_PATH + "script/configs/default_ape_config.json"
 
 # status json path
-STATUS_FILE = ROOT_PATH + "script/logs/default_status.json"
+STATUS_FILE = ROOT_PATH + "script/configs/default_status.json"
 
 # set json path
-SET_FILE = ROOT_PATH + "script/logs/default_set.json"
+SET_FILE = ROOT_PATH + "script/configs/default_set.json"
 
 
 # voice path

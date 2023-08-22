@@ -1,6 +1,0 @@
-[2023-06-12 16:00:59,171][ApeNavigation.py:276][ERROR][139923231328000] - /api/ApeNavigation/downloadPathMap : [Errno 2] No such file or directory: '/home/ape/APE_Application/src/ape_single/script/envs/path_map/path_combine.json'
-[2023-06-12 16:04:21,572][ApeConfig.py:334][ERROR][139923231328000] - /api/ApeConfig/getAGVBodyParam : 'list' object has no attribute 'update'
-[2023-06-12 16:04:40,691][ApeConfig.py:334][ERROR][139923231328000] - /api/ApeConfig/getAGVBodyParam : 'list' object has no attribute 'update'
-[2023-06-12 16:09:33,722][app.py:111][ERROR][139923231328000] - /api/ApeNavigation/finishBuildMap : The map build is not complete!
-[2023-06-12 16:09:42,503][app.py:111][ERROR][139923231328000] - /api/ApeNavigation/finishBuildMap : The map build is not complete!
-[2023-06-12 17:13:41,105][ApeConfig.py:334][ERROR][140020824401664] - /api/ApeConfig/getAGVBodyParam : 'list' object has no attribute 'update'

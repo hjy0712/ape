@@ -320,7 +320,7 @@ def Set_AGV_Body_Param():
     try:
         requestParam = request.get_json()
         configDict = configCollection.find_one()
-        configCollection.update_one({"_id": configDict["_id"]}, {'$set' : {"body_param": requestParam}})
+        configCollection.update_one({"_id": configDict["_id"]}, {'$set' : {"body_param": requestParam, "config_change": True}})
         return Api_Result(success)
     except Exception as e:
         current_app.logger.error("{} : {}".format(request.path, e))
@@ -349,7 +349,7 @@ def Set_AGV_Motion_Param():
     try:
         requestParam = request.get_json()
         configDict = configCollection.find_one()
-        configCollection.update_one({"_id": configDict["_id"]}, {'$set' : {"motion_param": requestParam}})
+        configCollection.update_one({"_id": configDict["_id"]}, {'$set' : {"motion_param": requestParam, "config_change": True}})
         return Api_Result(success)
     except Exception as e:
         current_app.logger.error("{} : {}".format(request.path, e))

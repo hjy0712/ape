@@ -1,4 +1,0 @@
-[2023-07-01 16:49:00,877][ApeControl.py:54][ERROR][140658601867008] - /api/ApeControl/remoteChargeControlToAGV : 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
-[2023-07-01 16:49:10,955][ApeControl.py:54][ERROR][140658635437824] - /api/ApeControl/remoteChargeControlToAGV : 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
-[2023-07-01 16:50:50,610][ApeControl.py:54][ERROR][140658601867008] - /api/ApeControl/remoteChargeControlToAGV : 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
-[2023-07-01 16:52:06,852][ApeControl.py:54][ERROR][140658601867008] - /api/ApeControl/remoteChargeControlToAGV : 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.

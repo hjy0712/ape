@@ -3,10 +3,11 @@
 /src/CMakeLists.txt
 *.pyc
 .vscode
+logs
 src/ape_single/script/envs/map/*
 src/ape_single/script/envs/path_map/*
-src/ape_single/script/logs/*.log
+src/ape_single/script/logs/*.log*
 !src/ape_single/script/envs/map/.gitkeep
 !src/ape_single/script/envs/path_map/.gitkeep
 __pycache__
-logs
+

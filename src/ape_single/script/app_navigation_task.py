@@ -255,13 +255,14 @@ def Config_Init():
     # vehicleParameterMsg.RotationSteerAngle = 0 # 没有此参数，等待整理
     # vehicleParameterPub.publish(vehicleParameterMsg)
     configDict = configCollection.find_one()
-    rospy.set_param('/APE_VehicleParameter/wheelX',configDict["body_param"]["unlift_wheelbase"])
-    rospy.set_param('/APE_VehicleParameter/wheelY',0) # 没有此参数，等待整理
-    rospy.set_param('/APE_VehicleParameter/wheelXCargo',configDict["body_param"]["lift_wheelbase"])
-    rospy.set_param('/APE_VehicleParameter/controlPointX',configDict["body_param"]["zero_position"])
-    rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',configDict["body_param"]["center_deviation"])
-    rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
-    rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
+    if configDict["config_change"]:
+        rospy.set_param('/APE_VehicleParameter/wheelX',configDict["body_param"]["unlift_wheelbase"])
+        rospy.set_param('/APE_VehicleParameter/wheelY',0) # 没有此参数，等待整理
+        rospy.set_param('/APE_VehicleParameter/wheelXCargo',configDict["body_param"]["lift_wheelbase"])
+        rospy.set_param('/APE_VehicleParameter/controlPointX',configDict["body_param"]["zero_position"])
+        rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',configDict["body_param"]["center_deviation"])
+        rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
+        rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
 
 
 if __name__ == "__main__":
@@ -276,10 +277,10 @@ if __name__ == "__main__":
     navtaskDict = NavtaskCollection.find_one()
     condition = {"_id": navtaskDict["_id"]}
     NavtaskCollection.update_one(condition, {'$set': navtask_info})
-
-    # 初始化参数
-    Config_Init()
     
+    # 初始化参数
+    configCollection.update_one({}, {"$set": {"config_change": True}})
+
     set_info = {
         "nav_start" : False,
         "finish_charge" : False,
@@ -301,6 +302,9 @@ if __name__ == "__main__":
         # 1. get info from database
         NavtaskDict = NavtaskCollection.find_one()
         SetDict = setCollection.find_one()
+
+        # 初始化参数
+        Config_Init()
 
         try:
             # 1.1 judge the "task_control_status"

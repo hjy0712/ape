@@ -355,7 +355,8 @@ class NavRun(object):
                 return [current_station, first_station]
             # 如果不满足条件，则应该先寻路上到最近的站点
             else:
-                return [current_station, current_station, first_station]
+                station_list = self.Find_Path_List(current_station, first_station)
+                return [current_station] + station_list
 
 
     def Find_Path_List(self, start_station:str, stop_station:str) ->list:
@@ -518,25 +519,37 @@ class NavRun(object):
         Args:
             pathData (list): 路径站点列表
         """
-        try:
-            print(pathData)
-            for i in range(0, len(pathData)-1):
-                pathMsg = PathSegment()
-                self.seq += 1
-                pathMsg.sequenceID = self.seq
-                if pathData[i] == pathData[i+1]:
-                    pathMsg = self.Create_Line(pathData[i+1], pathMsg)
-                else:
-                    pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
+        
+        print(pathData)
+        for i in range(0, len(pathData)-1):
+            pathMsg = PathSegment()
+            self.seq += 1
+            pathMsg.sequenceID = self.seq
+            if pathData[i] == pathData[i+1]:
+                pathMsg = self.Create_Line(pathData[i+1], pathMsg)
+            else:
+                pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
 
+            try:
                 while self.seq_received != self.seq: #等待control收到信息
+                    if self.seq_received == -1:
+                        # 路径跟随控制失败，需要取消任务并报错
+                        # 增加error
+                        Add_Error_DB("Navigation Error")
+                        # 播放报错语音
+                        tool.Run_ShellCmd("play "+VOICE_FOLD+ERROR_NAME)
+                        # 取消任务并阻塞
+                        navDict = NavtaskCollection.find_one()
+                        NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
+                        # 直接退出程序
+                        return False
                     print(pathMsg)
                     self.path_pub.publish(pathMsg)
                     print("publish path msg")
                     print(self.seq)
                     time.sleep(0.1)
-        except Exception as e:
-            print("publish error: {}".format(str(e)))
+            except Exception as e:
+                print("publish error: {}".format(str(e)))
         
         
     def Create_Line(self, station:str, pathMsg):

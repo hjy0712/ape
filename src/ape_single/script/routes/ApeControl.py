@@ -23,6 +23,7 @@ configCollection = apeDB["ape_config_collection"]
 def Remote_Motion_Control():
     try:
         requestParam = request.get_json()
+        current_app.logger.debug("speed: {}, angle: {}".format(requestParam["speed"], requestParam["wheelAngle"]))
         Ros_Remote_Vel(requestParam["speed"], requestParam["wheelAngle"])
         return Api_Result(success)
     except Exception as reason:

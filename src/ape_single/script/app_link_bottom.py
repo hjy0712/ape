@@ -131,7 +131,7 @@ def apeMesCallback(msg):
     # AGV速度和角度
     statusUpdateDict.update({"real_VelocityVel": round(msg.velocityVel, 3), 
                                 "real_WheelAngle": round(msg.angleVel, 3),
-                                "batteryLevel": msg.batteryCapacityRatio,
+                                "batteryLevel": 0 if msg.batteryCapacityRatio!=msg.batteryCapacityRatio else msg.batteryCapacityRatio,
                                 "current": msg.batteryCurrent,
                                 "voltage": msg.batteryVoltage,
                                 "batteryTemp": msg.batteryTempterature})
@@ -574,7 +574,7 @@ if __name__ == "__main__":
     APEPumpPub = rospy.Publisher('/APE_Pump', UInt8, queue_size=10)
     APEAvoidPub = rospy.Publisher('/APE_AvoidCollison', UInt8, queue_size=10)
     
-    rate = rospy.Rate(5)
+    rate = rospy.Rate(10)
 
 
     # ------------------ publish ----------------- #
