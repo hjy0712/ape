@@ -100,7 +100,7 @@ def Station_BFS(start_station:str, finish_station:str, maps:dict) ->list:
                     key = farther
                 # 反推完成后，将列表反转，打印从起点到终点的路径，符合人的习惯
                 path.reverse()
-                print(path)
+                # print(path)
                 break
             else:
                 # 如果当前节点不是终点，则把它的子节点加入队列
@@ -183,6 +183,10 @@ class NavRun(object):
         self.path_pub = rospy.Publisher(CONTROL_PATH_TOPIC_NAME,PathSegment, queue_size=10)
         self.seq_sub = rospy.Subscriber(CONTROL_SEQ_TOPIC_NAME, Int64, self.seqCallback)
 
+        # speedlimit
+        configDict = configCollection.find_one()
+        self.speed_limit = configDict["motion_param"]["max_speed"]
+
 
     def seqCallback(self, msg):
         """用于control向后端发送的sequenceID的回调函数
@@ -190,6 +194,7 @@ class NavRun(object):
         Args:
             msg (_type_): 传递过来的topic
         """
+        print("get recieve: {}".format(msg.data))
         self.seq_received = msg.data
 
 
@@ -442,7 +447,7 @@ class NavRun(object):
 
             # topic初始化
             pathMsg.lineType = 4
-            pathMsg.speedLimit = 0.4
+            pathMsg.speedLimit = self.speed_limit
 
             # 起始终止站点信息
             station_list = pathSamp["advancedPointList"]
@@ -459,11 +464,13 @@ class NavRun(object):
                     pathMsg.index = item["instanceName"]
                     pathMsg.controlPointsCnt = len(item["points"])
                     middlePoint = []
+                    middlePoint.append(pathMsg.startPointPosition)
                     anyPoint = PositionInfo()
                     for point in item["points"]:
                         anyPoint.x = point["x"]
                         anyPoint.y = point["y"]
                         middlePoint.append(anyPoint)
+                    middlePoint.append(pathMsg.endPointPosition)
                     pathMsg.controlPoints = middlePoint
     
                     break
@@ -476,7 +483,7 @@ class NavRun(object):
                 path_dict = json.load(f)
 
             # topic初始化
-            pathMsg.speedLimit = 0.4
+            pathMsg.speedLimit = self.speed_limit
 
             # 起始终止站点信息
             station_list = path_dict["advancedPointList"]
@@ -499,15 +506,17 @@ class NavRun(object):
                         pathMsg.controlPointsCnt = 4
                         pathMsg.lineType = 3
                         middlePoint = []
+                        middlePoint.append(pathMsg.startPointPosition)
                         for point in [item["controlPos1"], item["controlPos2"]]:
                             anyPoint = PositionInfo()
                             anyPoint.x = point["x"]
                             anyPoint.y = point["y"]
                             middlePoint.append(anyPoint)
+                        middlePoint.append(pathMsg.endPointPosition)
                         pathMsg.controlPoints = middlePoint
                     else:
                         pathMsg.lineType = 1
-                        pathMsg.controlPointsCnt = 2
+                        pathMsg.controlPointsCnt = 0
     
                     break
             return pathMsg
@@ -520,7 +529,7 @@ class NavRun(object):
             pathData (list): 路径站点列表
         """
         
-        print(pathData)
+        # print(pathData)
         for i in range(0, len(pathData)-1):
             pathMsg = PathSegment()
             self.seq += 1
@@ -530,8 +539,11 @@ class NavRun(object):
             else:
                 pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
 
-            try:
-                while self.seq_received != self.seq: #等待control收到信息
+
+            print("seq_received is {}".format(self.seq_received))
+            print("seq is {}".format(self.seq))
+            while self.seq_received != self.seq: #等待control收到信息
+                try:
                     if self.seq_received == -1:
                         # 路径跟随控制失败，需要取消任务并报错
                         # 增加error
@@ -545,11 +557,11 @@ class NavRun(object):
                         return False
                     print(pathMsg)
                     self.path_pub.publish(pathMsg)
-                    print("publish path msg")
-                    print(self.seq)
+                    # print("publish path msg")
+                    # print(self.seq)
                     time.sleep(0.1)
-            except Exception as e:
-                print("publish error: {}".format(str(e)))
+                except Exception as e:
+                    print("publish error: {}".format(str(e)))
         
         
     def Create_Line(self, station:str, pathMsg):
@@ -564,8 +576,8 @@ class NavRun(object):
         """
         # topic初始化
         pathMsg.lineType = 1
-        pathMsg.speedLimit = 0.4
-        pathMsg.controlPointsCnt = 2
+        pathMsg.speedLimit = self.speed_limit
+        pathMsg.controlPointsCnt = 0
         pathMsg.index = "current-{}".format(station)
         pathMsg.ignoreDir = True #待修改
         pathMsg.direction = False
@@ -589,7 +601,7 @@ class NavRun(object):
 
             # 寻找目标点
             station_list = pathSamp["advancedPointList"]
-            pathMsg.endPointPosition = self.Position_Info(station, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(station, station_list)
             pathMsg.endPointID = station
 
         # 路径规划方案
@@ -600,7 +612,7 @@ class NavRun(object):
 
             # 寻找目标点
             station_list = path_dict["advancedPointList"]
-            pathMsg.endPointPosition = self.Position_Info(station, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(station, station_list)
             pathMsg.endPointID = station
  
         return pathMsg

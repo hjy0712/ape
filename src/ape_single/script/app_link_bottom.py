@@ -294,7 +294,7 @@ class Bottom_Operation(object):
             # APEVeloMsg.angular.z = wheelAngle
             # APEVeloPub.publish(APEVeloMsg)
             set_info["set_VelocityVel"] = 0
-            set_info["set_WheelAngle"] = 0
+            # set_info["set_WheelAngle"] = 0
             setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
 
 
@@ -574,7 +574,7 @@ if __name__ == "__main__":
     APEPumpPub = rospy.Publisher('/APE_Pump', UInt8, queue_size=10)
     APEAvoidPub = rospy.Publisher('/APE_AvoidCollison', UInt8, queue_size=10)
     
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(5)
 
 
     # ------------------ publish ----------------- #

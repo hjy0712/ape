@@ -6,7 +6,8 @@
 <!-- laser working -->
   <include file="$(find pepperl_fuchs_r2000)/launch/r2000.launch"/>
 <!-- publish location -->
-  <node pkg="ape_tracking" type="location_and_pose" name="tf_Pose_Publisher"/>
+  <!-- <node pkg="ape_tracking" type="location_and_pose" name="tf_Pose_Publisher"/> -->
+  <node pkg="ape_tracking" type="pose_location.py" name="localization_pub"/>
 <!-- app server node -->
   <node pkg="ape_single" type="app_link_bottom.py" name="ape_app_control" output="screen"/>
 <!-- app server node -->

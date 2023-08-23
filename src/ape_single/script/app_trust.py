@@ -74,9 +74,20 @@ class TrustLocalization():
         self.trustData = Float32()
     
     def poseCallback(self, msg):
-        self.x = msg.x + 1.04502873640911*math.cos(msg.theta) - 0.315999999999994*math.sin(msg.theta)
-        self.y = msg.y + 1.04502873640911*math.sin(msg.theta) + 0.315999999999994*math.cos(msg.theta)
-        self.theta = msg.theta
+        theta_ll = 3/180*math.pi
+        T_mb = np.array([[math.cos(msg.theta),-math.sin(msg.theta),msg.x],
+                         [math.sin(msg.theta),math.cos(msg.theta),msg.y],
+                         [0,0,1]])
+        T_bl = np.array([[1,0,1.04502873640911-0.12],
+                         [0,1,0.315999999999994],
+                         [0,0,1]])
+        T_ll = np.array([[math.cos(-theta_ll),-math.sin(-theta_ll),0],
+                         [math.sin(-theta_ll),math.cos(-theta_ll),0],
+                         [0,0,1]])
+        T_mbl = np.dot(T_mb,np.dot(T_bl,T_ll))
+        self.x = T_mbl[0,2]
+        self.y = T_mbl[1,2]
+        self.theta = math.atan2(T_mbl[1, 0], T_mbl[1, 1])
         self.R = np.array([[math.cos(self.theta),-math.sin(self.theta)],
                            [math.sin(self.theta),math.cos(self.theta)]])
         self.t = np.array([[self.x],
