@@ -349,7 +349,8 @@ class NavRun(object):
         print("station is {}, distance is {}".format(current_station, first_distance))
         
         # 判断AGV当前位置是否在站点上
-        if first_distance <= 0.25 and first_angle <= 10:
+        # if first_distance <= 0.25 and first_angle <= 10:
+        if first_distance <= 0.25:
             if current_station == first_station:
                 return True
             else:

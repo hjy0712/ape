@@ -212,8 +212,13 @@ def generate_maps():
 
 
 def Station_Match(pos : list):
-    """
-    第一个站点逻辑，寻找当前AGV所在站点是什么
+    """第一个站点逻辑，寻找当前AGV所在站点是什么
+
+    Args:
+        pos (list): 当前位置
+
+    Returns:
+        _type_: station：最近的站点, min(distance)：距离误差, abs(angle[min_index])：角度误差
     """
     station = ""
     distance = []
@@ -231,7 +236,12 @@ def Station_Match(pos : list):
             station_list = path_origin["advancedPointList"]
     for item in station_list:
         distance.append(math.sqrt(pow(pos["x"]-item["pos"]["x"], 2) + pow(pos["y"]-item["pos"]["y"], 2)))
-        angle.append((item["dir"] - pos["angle"]) * 180 / math.pi)
+        angle_err = item["dir"] - pos["angle"]
+        if angle_err > math.pi:
+            angle_err = angle_err - 2*math.pi
+        elif angle_err < math.pi:
+            angle_err = angle_err + 2*math.pi
+        angle.append(angle_err * 180 / math.pi)
     min_index = distance.index(min(distance))
     station = station_list[min_index]["instanceName"]
     return station, min(distance), abs(angle[min_index])
