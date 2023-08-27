@@ -223,6 +223,8 @@ class Bottom_Operation(object):
         # 手动控制
         self.manualParameterMsg = ManualParameter()
         self.manual_pub = rospy.Publisher(CONTROL_CMD_TOPIC_NAME, ManualParameter, queue_size=10)
+        self.manual_cmd = False
+        self.manual_time = time.time()
 
     def dataDictUpdate(self):
         self.configDict = configCollection.find_one()
@@ -270,8 +272,6 @@ class Bottom_Operation(object):
             speed = self.setDict["set_VelocityVel"]
             wheelAngle = self.setDict["set_WheelAngle"]
             wheelAngle = 180 * wheelAngle
-            # if speed < 0:
-            #     wheelAngle = wheelAngle - 180
             
             # 货叉
             direction = self.setDict["set_ForkStatus"]
@@ -280,6 +280,7 @@ class Bottom_Operation(object):
             elif direction == 1:
                 self.manualParameterMsg.forkCommand = 2
 
+            # 如果是手动控制，并且不在任务执行当中的话，需要保留历史货叉状态
             statusDict = statusCollection.find_one()
             if statusDict["manualAuto"] == 0 and (not self.setDict["nav_start"]):
                 set_info = {
@@ -291,11 +292,23 @@ class Bottom_Operation(object):
             self.manualParameterMsg.motorSpeed1 = speed
             self.manualParameterMsg.steeringAngle1 = wheelAngle
             self.manual_pub.publish(self.manualParameterMsg)
-            # APEVeloMsg.angular.z = wheelAngle
-            # APEVeloPub.publish(APEVeloMsg)
-            set_info["set_VelocityVel"] = 0
-            # set_info["set_WheelAngle"] = 0
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+
+            # 数据库更新，进行速度保护，在没有收到速度指令时，将速度置零
+            if not self.setDict["manual_set"]:
+                if self.manual_cmd:
+                    self.manual_cmd = False
+                    self.manual_time = time.time()
+                else:
+                    # 如果手动控制暂停了2s没有发送，则更新掉信息
+                    if time.time() - self.manual_time > 2:
+                        set_info["set_VelocityVel"] = 0
+                        # set_info["set_WheelAngle"] = 0
+                        setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+                        self.manual_time = time.time()
+            else:
+                self.manual_cmd = True
+                set_info["manual_set"] = False
+                setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
 
 
     def pumpPub(self):
@@ -327,12 +340,6 @@ class Bottom_Operation(object):
             Path_Combine()
             set_info["path_convert_stop"] = False
             setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
-        
-        # if setDict["need_record_station"]:
-        #     AGV_pathConvert.Add_AdvancedPoint(setDict["staionType"], 
-        #     setDict["stationID"], None)
-        #     set_info["need_record_station"] = False
-        #     setCollection.update_one(set_condition, {'$set' : set_info})
 
 
     def mapconvert(self):

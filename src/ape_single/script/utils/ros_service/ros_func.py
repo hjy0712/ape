@@ -29,7 +29,8 @@ def Ros_Remote_Vel(speed, wheelAngle):
     setDict = setCollection.find_one()
     set_info = {
         "set_VelocityVel": speed,
-        "set_WheelAngle": wheelAngle
+        "set_WheelAngle": wheelAngle,
+        "manual_set": True
     }
     condition = {"_id": setDict["_id"]}
     setCollection.update_one(condition, {'$set' : set_info})
@@ -40,7 +41,8 @@ def Ros_Remote_Pump(direction):
     """remote control pump"""
     setDict = setCollection.find_one()
     set_info = {
-        "set_ForkStatus": direction
+        "set_ForkStatus": direction,
+        "manual_set": True
     }
     condition = {"_id": setDict["_id"]}
     setCollection.update_one(condition, {'$set' : set_info})

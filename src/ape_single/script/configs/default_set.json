@@ -2,6 +2,7 @@
     "set_VelocityVel": 0,
     "set_WheelAngle": 0,
     "set_ForkStatus": 1,
+    "manual_set": false,
 
     "path_convert_start": false,
     "path_convert_stop": false,
