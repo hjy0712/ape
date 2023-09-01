@@ -55,6 +55,50 @@ def Remote_Charge_Control():
         current_app.logger.error("{} : {}".format(request.path, reason))
         abort(400)
 
+
+# ---------------- 遥控AGV 开始自动标定 --------------- #
+
+@ApeControl.route("/remoteCalibrateControlToAGV", methods=["POST"])
+def Remote_Charge_Control():
+    try:
+        requestParam = request.get_json()
+        # TODO
+        Ros_Remote_Calibration(requestParam["distance"], requestParam["speed"])
+        return Api_Result(success)
+    except Exception as reason:
+        current_app.logger.error("{} : {}".format(request.path, reason))
+        abort(400)
+
+
+# ---------------- 遥控AGV 取消自动标定 --------------- #
+
+@ApeControl.route("/cancelCalibrateControlToAGV", methods=["GET"])
+def Remote_Charge_Control():
+    try:
+        # TODO
+        # 修改数据库
+        
+        return Api_Result(success)
+    except Exception as reason:
+        current_app.logger.error("{} : {}".format(request.path, reason))
+        abort(400)
+
+
+# ---------------- 确认AGV 标定结果 --------------- #
+
+@ApeControl.route("/confirmCalibrateResult", methods=["POST"])
+def Remote_Charge_Control():
+    try:
+        requestParam = request.get_json()
+        # TODO
+        # 修改数据库，将标定结果计入数据库
+        Ros_Remote_Charge(requestParam["confirm"])
+        return Api_Result(success)
+    except Exception as reason:
+        current_app.logger.error("{} : {}".format(request.path, reason))
+        abort(400)
+
+
 # ---------------- 人工放行 --------------- #
 
 @ApeControl.route("/manualRelease", methods=["PUT"])

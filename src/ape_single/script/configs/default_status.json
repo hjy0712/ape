@@ -33,5 +33,7 @@
 
     "reloc_status": 0,
 
+    "cali_status":3,
+
     "manualAuto": 0
 }

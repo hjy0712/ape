@@ -1,0 +1,4 @@
+bool calibrate # True：开始标定，False：停止标定
+float32 speed # 标定速度
+---
+bool success # 如果calibrate是True则表示标定程序是否能正常开始，如果calibrate是Flase则表示标定结果是否合格

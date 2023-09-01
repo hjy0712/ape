@@ -182,9 +182,20 @@ def Get_Fork_Status():
 
 @ApeStatus.route("/getRelocationStatus", methods=["GET"])
 def Get_Relocation_Status():
+    statusDict = statusCollection.find_one()
     response_info = {
-        # "reloc_status":AGV_RosService.Ros_Relocation()
-        "reloc_status":0
+        "reloc_status":statusDict['reloc_status']
+    }
+    return Api_Return_Param(response_info)
+
+
+# ------------------- 查询AGV标定状态 -------------------------- #
+
+@ApeStatus.route("/getCalibrateStatus", methods=["GET"])
+def Get_Relocation_Status():
+    statusDict = statusCollection.find_one()
+    response_info = {
+        "cali_status":statusDict['cali_status']
     }
     return Api_Return_Param(response_info)
 
@@ -193,6 +204,17 @@ def Get_Relocation_Status():
 
 @ApeStatus.route("/getAllStatus", methods=["POST"])
 def Get_All_Status():
+    """返回所有状态信息，返回内容可选
+
+    Args:
+        apiParam (dict): 主要有两个key:
+                        "unsolved_error"表示返回没有解决的异常/全部异常
+                        "keys"表示返回指定状态
+
+    Returns:
+        response_info (dict): 返回所需状态
+    """
+    # 处理没有任何请求数据的情况，默认返回所有数据
     try:
         apiParam = request.get_json()
     except Exception as e:
@@ -201,6 +223,7 @@ def Get_All_Status():
             "keys":None
         }
     
+    # 处理存在两个key或者只有其中之一的情况
     for i in ["unsolved_error", "keys"]:
         if i not in apiParam.keys():
             apiParam.update({i:None})
@@ -242,9 +265,9 @@ def Get_All_Status():
         "current":statusDict['current'],
         "emergency":statusDict['emergency'],
         "charge_on": True if statusDict['current'] < 0 else False,
-        # "reloc_status":AGV_RosService.Ros_Relocation()
         "reloc_status":statusDict['reloc_status'],
-        "errors":errors
+        "errors":errors,
+        "cali_status":statusDict['cali_status']
     }
 
     try:
