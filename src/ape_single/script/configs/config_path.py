@@ -97,3 +97,5 @@ CONTROL_MODE_TOPIC_NAME = "/APE_Control/mode"
 CONTROL_CMD_TOPIC_NAME = '/APE_Control/manualCmd'
 # confidence topic name
 TRUST_TOPIC_NAME = "/APE_Trust"
+# calibration service
+CALIBRATION_SERVICE_NAME = "/APE_Cali/caliCmd"

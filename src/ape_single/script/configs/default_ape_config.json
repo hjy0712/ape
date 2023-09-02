@@ -29,5 +29,6 @@
     },
     "config_change": true,
     "no_avoid_area": [],
-    "avoid_invalid": false
+    "avoid_invalid": false,
+    "calibration_speed": 0
 }
