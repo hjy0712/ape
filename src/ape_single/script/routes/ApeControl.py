@@ -59,11 +59,15 @@ def Remote_Charge_Control():
 # ---------------- 遥控AGV 开始自动标定 --------------- #
 
 @ApeControl.route("/remoteCalibrateControlToAGV", methods=["POST"])
-def Remote_Charge_Control():
+def Remote_Calibrate_ControlToAGV():
     try:
         requestParam = request.get_json()
-        # TODO
-        Ros_Remote_Calibration(requestParam["distance"], requestParam["speed"])
+        calibration_set = {
+            "calibration_start": True,
+            "calibration_speed": requestParam["speed"],
+            "calibration_distance": requestParam["distance"]
+        }
+        setCollection.update_one({}, {"$set":calibration_set})
         return Api_Result(success)
     except Exception as reason:
         current_app.logger.error("{} : {}".format(request.path, reason))
@@ -73,11 +77,9 @@ def Remote_Charge_Control():
 # ---------------- 遥控AGV 取消自动标定 --------------- #
 
 @ApeControl.route("/cancelCalibrateControlToAGV", methods=["GET"])
-def Remote_Charge_Control():
+def Cancel_Calibrate_ControlToAGV():
     try:
-        # TODO
-        # 修改数据库
-        
+        setCollection.update_one({}, {"$set":{"calibration_cancel": True}})
         return Api_Result(success)
     except Exception as reason:
         current_app.logger.error("{} : {}".format(request.path, reason))
@@ -87,12 +89,15 @@ def Remote_Charge_Control():
 # ---------------- 确认AGV 标定结果 --------------- #
 
 @ApeControl.route("/confirmCalibrateResult", methods=["POST"])
-def Remote_Charge_Control():
+def Confirm_Calibrate_Result():
     try:
         requestParam = request.get_json()
-        # TODO
-        # 修改数据库，将标定结果计入数据库
-        Ros_Remote_Charge(requestParam["confirm"])
+        if requestParam["confirm"]:
+            # 把参数写到配置文件中
+            config_dict = configCollection.find_one()
+            configCollection.update_one({}, {"$set": {"calibration_param":config_dict["calibration_param_ready"]}})
+        else:
+            statusCollection.update_one({}, {"$set": {"cali_status":0}})
         return Api_Result(success)
     except Exception as reason:
         current_app.logger.error("{} : {}".format(request.path, reason))

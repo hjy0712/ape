@@ -192,7 +192,7 @@ def Get_Relocation_Status():
 # ------------------- 查询AGV标定状态 -------------------------- #
 
 @ApeStatus.route("/getCalibrateStatus", methods=["GET"])
-def Get_Relocation_Status():
+def Get_Calibrate_Status():
     statusDict = statusCollection.find_one()
     response_info = {
         "cali_status":statusDict['cali_status']

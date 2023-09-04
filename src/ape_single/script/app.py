@@ -49,7 +49,7 @@ def create_app():
     formatter = logging.Formatter(
         "[%(asctime)s][%(filename)s:%(lineno)d][%(levelname)s][%(thread)d] - %(message)s")
     handler = TimedRotatingFileHandler(
-        "/home/ape/APE_Application/src/ape_single/script/logs/flask.log", when="D", interval=1, backupCount=15,
+        LOG_FILE, when="D", interval=1, backupCount=15,
         encoding="UTF-8", delay=False, utc=True)
     app.logger.addHandler(handler)
     handler.setFormatter(formatter)

@@ -263,6 +263,13 @@ def Config_Init():
         rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',configDict["body_param"]["center_deviation"])
         rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
         rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
+        # 标定参数
+        rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',configDict["calibration_param"]["steeringAngleOffset"])
+        rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',configDict["calibration_param"]["laserOffsetAngle"])
+        rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',configDict["calibration_param"]["isLaserOffsetAngleValid"])
+        rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',configDict["calibration_param"]["isSteeringAngleOffsetValid"])
+    
+    return True
 
 
 if __name__ == "__main__":

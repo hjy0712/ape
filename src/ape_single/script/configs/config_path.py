@@ -99,3 +99,10 @@ CONTROL_CMD_TOPIC_NAME = '/APE_Control/manualCmd'
 TRUST_TOPIC_NAME = "/APE_Trust"
 # calibration service
 CALIBRATION_SERVICE_NAME = "/APE_Cali/caliCmd"
+# serial
+SERIAL_NODE_NAME = "web_serial_node"
+SERIAL_PARAM_SERVICE_NAME = "/ape_srv/board_param_rs"
+SERIAL_BASIC_SERVICE_NAME = "/ape_srv/basic_info_read"
+
+# log file
+LOG_FILE = ROOT_PATH + "script/logs/flask.log"

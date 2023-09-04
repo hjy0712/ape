@@ -1,8 +1,8 @@
-#!/home/ape/miniconda3/envs/flask/bin/python
+#!/home/lwj/miniconda3/bin/python
 # -*- coding: utf-8 -*-
 
 import rospy
-import math, time
+import math
 
 from geometry_msgs.msg import Pose2D
 from ape_single.srv import CalibrateStatus
@@ -25,26 +25,104 @@ configCollection = apeDB["ape_config_collection"]
 setCollection = apeDB["ape_set_collection"]
 
 class Calibration():
-    def __init__(self,x,y,distance):
+    def __init__(self,x,y,distance,repeat_time):
+        """标定变量初始化
+
+        Args:
+            x (_type_): x坐标
+            y (_type_): y坐标
+            distance (_type_): 设定标定移动距离
+            repeat_time (_type_): 最大重复标定次数
+        """
         self.x = x
         self.y = y
         self.start_record = False
         self.target_distance = distance
         self.distance = 0
+        self.speed = 0
+        self.repeat_time = repeat_time
+        self.current_repeat_time = 0
+        self.__is_calibration = False
 
         self.pose_sub = rospy.Subscriber("/APETrack/PoseData", Pose2D, self.Pose_Callback)
 
-    def Start_Calibration(self):
+    def Start_Calibration(self, distance, speed):
+        """开始执行标定流程
+
+        Args:
+            distance (_type_): 标定距离
+            speed (_type_): 标定速度
+
+        Raises:
+            Exception: 1. ros service没有响应; 2. 服务节点处于关闭状态
+
+        Returns:
+            Bool: 是否开始标定
+        """
+
         # 发送service
-        configDict = configCollection.find_one()
+        self.target_distance = distance
+        # self.current_repeat_time = 0
+        self.speed = speed
         node_list = tool.Ros_Get_NodeList()
         try:
             if CONTROL_NODE_NAME in node_list:
                 rospy.wait_for_service(CALIBRATION_SERVICE_NAME)
                 CalibrationStart = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, CalibrateStatus)
-                resp1 = CalibrationStart(True, configDict["calibration_speed"])
+                resp1 = CalibrationStart(True, speed)
+                # 将开始标定的状态写到数据库中
+                statusCollection.update_one({}, {"$set": {"cali_status":2}})
                 if not resp1.success:
+                    # 将失败的标定状态写到数据库中
+                    statusCollection.update_one({}, {"$set": {"cali_status":0}})
                     return resp1.success
+            else:
+                raise Exception("service dead")
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+            return False
+        except Exception as e:
+            print("Service call failed: %s"%e)
+            return False
+
+        # 开始进行标定
+        self.__is_calibration = True
+        # 开始记录距离
+        self.start_record = True
+        return True
+    
+
+    def Stop_Calibration(self):
+        # 发送service
+        node_list = tool.Ros_Get_NodeList()
+        try:
+            if CONTROL_NODE_NAME in node_list:
+                rospy.wait_for_service(CALIBRATION_SERVICE_NAME)
+                CalibrationStart = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, CalibrateStatus)
+                resp1 = CalibrationStart(False, 0)
+                # 记录标定状态
+                if not resp1.success:
+                    # 如果标定不成功，在重新标定次数内，则重新标定
+                    self.current_repeat_time += 1
+                    if self.current_repeat_time < self.repeat_time:
+                        self.Start_Calibration(self.target_distance, self.speed)
+                    else:
+                        self.current_repeat_time = 0
+                        # 将失败的标定状态写入数据库中
+                        statusCollection.update_one({}, {"$set": {"cali_status":0}})
+                    return resp1.success
+                else:
+                    self.current_repeat_time = 0
+                    # 将标定的数据写入数据库中
+                    config_info = {"calibration_param_ready":{
+                        "steeringAngleOffset": resp1.steeringAngleOffset,
+                        "laserOffsetAngle": resp1.laserOffsetAngle,
+                        "isLaserOffsetAngleValid": resp1.isLaserOffsetAngleValid,
+                        "isSteeringAngleOffsetValid": resp1.isSteeringAngleOffsetValid
+                    }}
+                    configCollection.update_one({}, {"$set": config_info})
+                    # 将成功的标定状态写入数据库中
+                    statusCollection.update_one({}, {"$set": {"cali_status":1}})
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:
@@ -52,43 +130,59 @@ class Calibration():
         except Exception as e:
             print("Service call failed: %s"%e)
 
-        # 开始记录距离
-        self.start_record = True
-        return True
-    
-    def Stop_Calibration(self):
-        # 发送service
-        # 记录标定状态
         return True
     
     def Cancel_Calibration(self):
-        # 发送停止service
-
+        # 发送取消service
+        node_list = tool.Ros_Get_NodeList()
+        try:
+            if CONTROL_NODE_NAME in node_list:
+                rospy.wait_for_service(CALIBRATION_SERVICE_NAME)
+                CalibrationStart = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, CalibrateStatus)
+                resp1 = CalibrationStart(False, 0)
+                self.__is_calibration = False
+            else:
+                raise Exception("service dead")
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+        except Exception as e:
+            print("Service call failed: %s"%e)
         return True
     
     def Calculate(self, msg):
-        return 0
+        self.distance = math.sqrt(math.pow(msg.x-self.x,2)+math.pow(msg.y-self.y,2))
+        return self.distance
     
     def Pose_Callback(self, msg):
-        # 更新里程计
-        if self.start_record:
-            self.x = msg.x
-            self.y = msg.y
-            self.start_record = False
-            self.distance = 0
-        
-        if self.Calculate(msg) >= self.target_distance:
-            self.Stop_Calibration()
-        
+        if self.__is_calibration:
+            # 更新里程计
+            if self.start_record:
+                self.x = msg.x
+                self.y = msg.y
+                self.start_record = False
+                self.distance = 0
+            
+            if self.Calculate(msg) >= self.target_distance:
+                self.Stop_Calibration()
+                self.__is_calibration = False
         return True
 
 if __name__ == '__main__':
-    rospy.init_node("trust_localization_node")
-    status_Dict = statusCollection.find_one()
-    set_Dict = setCollection.find_one()
-    x_tf = status_Dict["x"] + 1.04502873640911*math.cos(status_Dict["angle"]) - 0.315999999999994*math.sin(status_Dict["angle"])
-    y_tf = status_Dict["y"] + 1.04502873640911*math.sin(status_Dict["angle"]) + 0.315999999999994*math.cos(status_Dict["angle"])
-    relocal = TrustLocalization(x_tf, y_tf, status_Dict["angle"],1.0,MAP+MAP_NAME)
-    rospy.spin()
-    print("Trust calculation is shutdown!")
+    rospy.init_node("calibration_node")
+    rate = rospy.Rate(1)
+    APE_Calibration = Calibration(0,0,0,2)
+
+    while not rospy.is_shutdown():
+        status_Dict = statusCollection.find_one()
+        set_Dict = setCollection.find_one()
+        if set_Dict["calibration_start"]:
+            APE_Calibration.Start_Calibration(set_Dict["calibration_speed"], set_Dict["calibration_distance"])
+            setCollection.update_one({}, {"$set": {"calibration_start": False}})
+        if set_Dict["calibration_cancel"]:
+            APE_Calibration.Cancel_Calibration()
+            setCollection.update_one({}, {"$set": {"calibration_cancel": False}})
+
+        rate.sleep()
+
+    print("app_calibration is shutdown!")
 

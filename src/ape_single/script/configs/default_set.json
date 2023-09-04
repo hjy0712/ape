@@ -23,5 +23,10 @@
     "set_ChargeTrigger": false,
 
     "charge_do_open": false,
-    "charge_do_work": false
+    "charge_do_work": false,
+
+    "calibration_start": false,
+    "calibration_cancel": false,
+    "calibration_speed": 0,
+    "calibration_distance": 0
 }

@@ -27,8 +27,33 @@
         "position_track_accuracy": 8000.0,
         "angle_track_accuracy": 1000.0
     },
+    "stm32_motion_param": {
+        "wheelDiameter": 0.0,
+        "motorReductionRatio": 0.0,
+        "acceleration": 0,
+        "deceleration": 0,
+        "pumpUpwardSpeed": 0,
+        "pumpDownwardSpeed": 0
+    },
+    "stm32_basic_info": {
+        "boardtype": 0,
+        "boardFirmwareVer": 0,
+        "eControllerType": 0,
+        "eControllerVer": 0
+    },
+    "calibration_param_ready": {
+        "steeringAngleOffset": 0.0,
+        "laserOffsetAngle": 0.0,
+        "isLaserOffsetAngleValid": false,
+        "isSteeringAngleOffsetValid": false
+    },
+    "calibration_param": {
+        "steeringAngleOffset": 0.0,
+        "laserOffsetAngle": 0.0,
+        "isLaserOffsetAngleValid": false,
+        "isSteeringAngleOffsetValid": false
+    },
     "config_change": true,
     "no_avoid_area": [],
-    "avoid_invalid": false,
-    "calibration_speed": 0
+    "avoid_invalid": false
 }
