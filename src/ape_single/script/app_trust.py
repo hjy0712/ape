@@ -74,15 +74,24 @@ class TrustLocalization():
         self.trustData = Float32()
     
     def poseCallback(self, msg):
-        theta_ll = 3/180*math.pi
+        theta_l1l = 3.4/180*math.pi
+        x_l1b = 1.04502873640911
+        y_l1b = 0.315999999999994
+        x_bb1 = 0.12
+        y_bb1 = 0.0
+        theta_l1l = rospy.get_param("/APE_CalibrationParameter/laserOffsetAngle",default=3.4/180*math.pi)
+        x_l1b = rospy.get_param("/APE_CalibrationParameter/laserOffsetX", default=1.04502873640911)
+        y_l1b = rospy.get_param("/APE_CalibrationParameter/laserOffsetY", default=0.315999999999994)
+        x_bb1 = rospy.get_param("/APE_CalibrationParameter/forkOffsetX", default=0.12)
+        y_bb1 = rospy.get_param("/APE_CalibrationParameter/forkOffsetY", default=0)
         T_mb = np.array([[math.cos(msg.theta),-math.sin(msg.theta),msg.x],
                          [math.sin(msg.theta),math.cos(msg.theta),msg.y],
                          [0,0,1]])
-        T_bl = np.array([[1,0,1.04502873640911-0.12],
-                         [0,1,0.315999999999994],
+        T_bl = np.array([[1,0,x_l1b-x_bb1],
+                         [0,1,y_l1b-y_bb1],
                          [0,0,1]])
-        T_ll = np.array([[math.cos(-theta_ll),-math.sin(-theta_ll),0],
-                         [math.sin(-theta_ll),math.cos(-theta_ll),0],
+        T_ll = np.array([[math.cos(-theta_l1l),-math.sin(-theta_l1l),0],
+                         [math.sin(-theta_l1l),math.cos(-theta_l1l),0],
                          [0,0,1]])
         T_mbl = np.dot(T_mb,np.dot(T_bl,T_ll))
         self.x = T_mbl[0,2]

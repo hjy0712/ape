@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import rospy
-from web_serial.msg import APEInfo
-from web_serial.srv import AGVBasicInfoRead, AGVParamRS
+from ape_message_to_device.msg import APE_Message
+# from web_serial.msg import APEInfo
+# from web_serial.srv import AGVBasicInfoRead, AGVParamRS
 from geometry_msgs.msg import Twist
 from std_msgs.msg import UInt8
 from geometry_msgs.msg import Pose2D
@@ -191,94 +192,94 @@ def apeSubmapCallback(msg):
             statusCollection.update_one(condition, {'$set' : {"map_build_status": True}})
             break
 
-def Write_boardParam():
-    """向stm32写入运动参数的服务
+# def Write_boardParam():
+#     """向stm32写入运动参数的服务
 
-    Raises:
-        Exception: service没起来
-        Exception: 对应节点没起来
-    """
-    node_list = tool.Ros_Get_NodeList()
-    try:
-        if SERIAL_NODE_NAME in node_list:
-            rospy.wait_for_service(SERIAL_PARAM_SERVICE_NAME, timeout=2)
-            serial_param = rospy.ServiceProxy(SERIAL_PARAM_SERVICE_NAME, AGVParamRS)
-            config_dict = configCollection.find_one()
-            resp1 = serial_param(isRead              = 0,
-                                    wheelDiameter       = config_dict["stm32_motion_param"]["wheelDiameter"],
-                                    motorReductionRatio = config_dict["stm32_motion_param"]["motorReductionRatio"],
-                                    acceleration        = config_dict["stm32_motion_param"]["acceleration"],
-                                    deceleration        = config_dict["stm32_motion_param"]["deceleration"],
-                                    pumpUpwardSpeed     = config_dict["stm32_motion_param"]["pumpUpwardSpeed"],
-                                    pumpDownwardSpeed   = config_dict["stm32_motion_param"]["pumpDownwardSpeed"])
-            if resp1.ack:
-                raise Exception("wirte failed")
-        else:
-            raise Exception("service dead")
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
-    except Exception as e:
-        print("Service call failed: %s"%e)
-    return True
+#     Raises:
+#         Exception: service没起来
+#         Exception: 对应节点没起来
+#     """
+#     node_list = tool.Ros_Get_NodeList()
+#     try:
+#         if SERIAL_NODE_NAME in node_list:
+#             rospy.wait_for_service(SERIAL_PARAM_SERVICE_NAME, timeout=2)
+#             serial_param = rospy.ServiceProxy(SERIAL_PARAM_SERVICE_NAME, AGVParamRS)
+#             config_dict = configCollection.find_one()
+#             resp1 = serial_param(isRead              = 0,
+#                                     wheelDiameter       = config_dict["stm32_motion_param"]["wheelDiameter"],
+#                                     motorReductionRatio = config_dict["stm32_motion_param"]["motorReductionRatio"],
+#                                     acceleration        = config_dict["stm32_motion_param"]["acceleration"],
+#                                     deceleration        = config_dict["stm32_motion_param"]["deceleration"],
+#                                     pumpUpwardSpeed     = config_dict["stm32_motion_param"]["pumpUpwardSpeed"],
+#                                     pumpDownwardSpeed   = config_dict["stm32_motion_param"]["pumpDownwardSpeed"])
+#             if resp1.ack:
+#                 raise Exception("wirte failed")
+#         else:
+#             raise Exception("service dead")
+#     except rospy.ServiceException as e:
+#         print("Service call failed: %s"%e)
+#     except Exception as e:
+#         print("Service call failed: %s"%e)
+#     return True
 
-def Read_boardParam():
-    """向stm32读取运动参数的服务
+# def Read_boardParam():
+#     """向stm32读取运动参数的服务
 
-    Raises:
-        Exception: service没起来
-        Exception: 对应节点没起来
-    """
-    node_list = tool.Ros_Get_NodeList()
-    try:
-        if SERIAL_NODE_NAME in node_list:
-            rospy.wait_for_service(SERIAL_PARAM_SERVICE_NAME, timeout=2)
-            serial_param = rospy.ServiceProxy(SERIAL_PARAM_SERVICE_NAME, AGVParamRS)
-            resp1 = serial_param(isRead = 1)
-            if resp1.ack:
-                raise Exception("read failed")
-            else:
-                config_info = {"stm32_motion_param":{
-                    "wheelDiameter": resp1.wheelDiameter,
-                    "motorReductionRatio": resp1.motorReductionRatio,
-                    "acceleration": resp1.acceleration,
-                    "deceleration": resp1.deceleration,
-                    "pumpUpwardSpeed": resp1.pumpUpwardSpeed,
-                    "pumpDownwardSpeed": resp1.pumpDownwardSpeed
-                }}
-                configCollection.update_one({}, {"$set": config_info})
-        else:
-            raise Exception("service dead")
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
-    except Exception as e:
-        print("Service call failed: %s"%e)
+#     Raises:
+#         Exception: service没起来
+#         Exception: 对应节点没起来
+#     """
+#     node_list = tool.Ros_Get_NodeList()
+#     try:
+#         if SERIAL_NODE_NAME in node_list:
+#             rospy.wait_for_service(SERIAL_PARAM_SERVICE_NAME, timeout=2)
+#             serial_param = rospy.ServiceProxy(SERIAL_PARAM_SERVICE_NAME, AGVParamRS)
+#             resp1 = serial_param(isRead = 1)
+#             if resp1.ack:
+#                 raise Exception("read failed")
+#             else:
+#                 config_info = {"stm32_motion_param":{
+#                     "wheelDiameter": resp1.wheelDiameter,
+#                     "motorReductionRatio": resp1.motorReductionRatio,
+#                     "acceleration": resp1.acceleration,
+#                     "deceleration": resp1.deceleration,
+#                     "pumpUpwardSpeed": resp1.pumpUpwardSpeed,
+#                     "pumpDownwardSpeed": resp1.pumpDownwardSpeed
+#                 }}
+#                 configCollection.update_one({}, {"$set": config_info})
+#         else:
+#             raise Exception("service dead")
+#     except rospy.ServiceException as e:
+#         print("Service call failed: %s"%e)
+#     except Exception as e:
+#         print("Service call failed: %s"%e)
 
-def Read_boardBasic():
-    """向stm32读取板子参数的服务
+# def Read_boardBasic():
+#     """向stm32读取板子参数的服务
 
-    Raises:
-        Exception: service没起来
-        Exception: 对应节点没起来
-    """
-    node_list = tool.Ros_Get_NodeList()
-    try:
-        if SERIAL_NODE_NAME in node_list:
-            rospy.wait_for_service(SERIAL_BASIC_SERVICE_NAME, timeout=2)
-            serial_basic = rospy.ServiceProxy(SERIAL_BASIC_SERVICE_NAME, AGVBasicInfoRead)
-            resp1 = serial_basic()
-            config_info = {"stm32_basic_info":{
-                "boardtype": resp1.boardtype,
-                "boardFirmwareVer": resp1.boardFirmwareVer,
-                "eControllerType": resp1.eControllerType,
-                "eControllerVer": resp1.eControllerVer
-            }}
-            configCollection.update_one({}, {"$set": config_info})
-        else:
-            raise Exception("service dead")
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
-    except Exception as e:
-        print("Service call failed: %s"%e)
+#     Raises:
+#         Exception: service没起来
+#         Exception: 对应节点没起来
+#     """
+#     node_list = tool.Ros_Get_NodeList()
+#     try:
+#         if SERIAL_NODE_NAME in node_list:
+#             rospy.wait_for_service(SERIAL_BASIC_SERVICE_NAME, timeout=2)
+#             serial_basic = rospy.ServiceProxy(SERIAL_BASIC_SERVICE_NAME, AGVBasicInfoRead)
+#             resp1 = serial_basic()
+#             config_info = {"stm32_basic_info":{
+#                 "boardtype": resp1.boardtype,
+#                 "boardFirmwareVer": resp1.boardFirmwareVer,
+#                 "eControllerType": resp1.eControllerType,
+#                 "eControllerVer": resp1.eControllerVer
+#             }}
+#             configCollection.update_one({}, {"$set": config_info})
+#         else:
+#             raise Exception("service dead")
+#     except rospy.ServiceException as e:
+#         print("Service call failed: %s"%e)
+#     except Exception as e:
+#         print("Service call failed: %s"%e)
     
 
 

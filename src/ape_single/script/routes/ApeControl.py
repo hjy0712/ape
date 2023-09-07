@@ -64,8 +64,8 @@ def Remote_Calibrate_ControlToAGV():
         requestParam = request.get_json()
         calibration_set = {
             "calibration_start": True,
-            "calibration_speed": requestParam["speed"],
-            "calibration_distance": requestParam["distance"]
+            "calibration_speed": float(requestParam["speed"]),
+            "calibration_distance": float(requestParam["distance"])
         }
         setCollection.update_one({}, {"$set":calibration_set})
         return Api_Result(success)

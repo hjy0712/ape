@@ -86,7 +86,7 @@ SMAPDATA = {
     }
 
 # control node name
-CONTROL_NODE_NAME = "control_node"
+CONTROL_NODE_NAME = "/motionControl"
 # control service name
 CONTROL_TASK_SERVICE_NAME = "/APE_Task/taskStatus"
 CONTROL_TRACK_SERVICE_NAME = "/APE_Task/trackStatus"

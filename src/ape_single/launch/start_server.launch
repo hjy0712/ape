@@ -10,8 +10,10 @@
   <node pkg="ape_tracking" type="pose_location.py" name="localization_pub"/>
 <!-- app server node -->
   <node pkg="ape_single" type="app_link_bottom.py" name="ape_app_control" output="screen"/>
-<!-- app server node -->
+<!-- control server node -->
   <node pkg="motionControl" type="motionControl" name="motionControl" output="screen"/>
+<!-- calibration server node -->
+  <node pkg="ape_single" type="app_calibration.py" name="calibration_node" output="screen"/>
 <!-- map server node -->
   <!-- <node pkg="ape_single" type="app_map_server.py" name="convert_map"/> -->
 <!-- rosbridge server node -->

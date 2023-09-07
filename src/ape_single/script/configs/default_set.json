@@ -27,6 +27,6 @@
 
     "calibration_start": false,
     "calibration_cancel": false,
-    "calibration_speed": 0,
-    "calibration_distance": 0
+    "calibration_speed": 0.0,
+    "calibration_distance": 0.0
 }
