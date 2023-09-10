@@ -268,8 +268,6 @@ def Config_Init():
         rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',configDict["calibration_param"]["steeringAngleOffset"])
     if configDict["calibration_param"]["isLaserOffsetAngleValid"]:
         rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',configDict["calibration_param"]["laserOffsetAngle"])
-    # rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',configDict["calibration_param"]["isLaserOffsetAngleValid"])
-    # rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',configDict["calibration_param"]["isSteeringAngleOffsetValid"])
     statusDict = statusCollection.find_one()
     if statusDict["real_ForkStatus"] == 1:
         # top fork
@@ -279,6 +277,9 @@ def Config_Init():
         # fork down
         rospy.set_param('/APE_CalibrationParameter/forkOffsetY', 0)
         rospy.set_param('/APE_CalibrationParameter/forkOffsetX', 0)
+    # 激光雷达位置偏置
+    rospy.set_param("/APE_CalibrationParameter/laserOffsetX", 0)
+    rospy.set_param("/APE_CalibrationParameter/laserOffsetY", 0)
     return True
 
 
