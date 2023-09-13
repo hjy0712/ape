@@ -9,8 +9,10 @@ from ape_single.msg import PathSegment
 from ape_single.msg import PositionInfo
 from std_msgs.msg import Int64
 
-import json, math
-import time, datetime
+import json
+import math
+import time
+import datetime
 from configs.config_path import *
 from transforms3d.euler import euler2quat
 
@@ -36,18 +38,20 @@ setCollection = apeDB["ape_set_collection"]
 configCollection = apeDB["ape_config_collection"]
 RestoretaskCollection = apeDB["ape_Restoretask_collection"]
 
+
 def draw_machine(machine):
     """将有限状态机绘制为图片
 
     Args:
         machine (transitions.Machine): 状态机对象
     """
-    filename='{}_state_machine.png'.format(machine.model.name)
+    filename = '{}_state_machine.png'.format(machine.model.name)
     transitions = []
     for trigger, event in machine.events.items():
         for source, _transitions in event.transitions.items():
             for i in _transitions:
-                transitions.append({'trigger': trigger, 'source': source, 'dest': i.dest})
+                transitions.append(
+                    {'trigger': trigger, 'source': source, 'dest': i.dest})
     machine = GraphMachine(model=machine.model, states=list(machine.states.keys()), transitions=transitions,
                            initial=machine.initial)
     graph = machine.get_graph()
@@ -59,7 +63,7 @@ def draw_machine(machine):
     graph.draw(filename, prog='dot')
 
 
-def Station_BFS(start_station:str, finish_station:str, maps:dict) ->list:
+def Station_BFS(start_station: str, finish_station: str, maps: dict) -> list:
     """BFS算法寻找最短路径
 
     Args:
@@ -115,7 +119,8 @@ def Station_BFS(start_station:str, finish_station:str, maps:dict) ->list:
 
 class NavRun(object):
 
-    states = ['none', 'run_to_next_station', 'wait_for_tracking', "do_operation", "charge"]
+    states = ['none', 'run_to_next_station',
+              'wait_for_tracking', "do_operation", "charge"]
 
     def __init__(self, name, station_list, operation_list, current_station_index, given_run_time, current_run_time):
 
@@ -123,16 +128,17 @@ class NavRun(object):
         self.name = name
 
         # Initialize the state machine
-        self.machine = Machine(model=self, states=NavRun.states, initial='none')
+        self.machine = Machine(
+            model=self, states=NavRun.states, initial='none')
 
         # when the control is on, need to send path data to topic '/APETrack/TrackPath'
         self.machine.add_transition(trigger='send_start', source=['none', 'do_operation'], dest='run_to_next_station',
-                         after=['In_Change_Log', 'Send_Message'], before='Out_Change_Log')
+                                    after=['In_Change_Log', 'Send_Message'], before='Out_Change_Log')
 
         # when the info has been sent, need to wait for the tracking callback
         # the state change from "wait_for_tracking" to other is triggered in service callback
         self.machine.add_transition('send_off', 'run_to_next_station', 'wait_for_tracking',
-                         after=['In_Change_Log'], before='Out_Change_Log')
+                                    after=['In_Change_Log'], before='Out_Change_Log')
 
         # when tracking is done, need to do assigned operation
         # self.machine.add_transition('sub_station_reach', 'wait_for_tracking', 'run_to_next_station',
@@ -140,15 +146,14 @@ class NavRun(object):
 
         # when tracking is done, need to do assigned operation
         self.machine.add_transition('station_reach', 'wait_for_tracking', 'do_operation',
-                         after=['In_Change_Log', "Make_Action"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Make_Action"], before='Out_Change_Log')
 
         # when station is the last, need to stop the nav
         self.machine.add_transition('complete', 'do_operation', 'none',
-                         after=['In_Change_Log', "Complete_Task"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Complete_Task"], before='Out_Change_Log')
 
         # init maps
         self.maps = generate_maps()
-
 
         # ------------------------- nav_task --------------------------------- #
         # 存放任务链
@@ -180,13 +185,14 @@ class NavRun(object):
         # sequenceID
         self.seq = 0
         self.seq_received = 0
-        self.path_pub = rospy.Publisher(CONTROL_PATH_TOPIC_NAME,PathSegment, queue_size=10)
-        self.seq_sub = rospy.Subscriber(CONTROL_SEQ_TOPIC_NAME, Int64, self.seqCallback)
+        self.path_pub = rospy.Publisher(
+            CONTROL_PATH_TOPIC_NAME, PathSegment, queue_size=10)
+        self.seq_sub = rospy.Subscriber(
+            CONTROL_SEQ_TOPIC_NAME, Int64, self.seqCallback)
 
         # speedlimit
         configDict = configCollection.find_one()
         self.speed_limit = configDict["motion_param"]["max_speed"]
-
 
     def seqCallback(self, msg):
         """用于control向后端发送的sequenceID的回调函数
@@ -197,11 +203,11 @@ class NavRun(object):
         print("get recieve: {}".format(msg.data))
         self.seq_received = msg.data
 
-
     def Action_Detail(self):
         """ 执行操作的具体内容 """
         # 执行操作应该为当前站点的下一个站点的操作
-        operation = self.AGV_operationList[(self.AGV_stationIndex+1)%len(self.AGV_operationList)]
+        operation = self.AGV_operationList[(
+            self.AGV_stationIndex+1) % len(self.AGV_operationList)]
 
         # 叉架上升
         if operation == "pick_up":
@@ -210,7 +216,7 @@ class NavRun(object):
                 "set_ForkStatus": 0
             }
             condition = {"_id": setDict["_id"]}
-            setCollection.update_one(condition, {'$set' : set_info})
+            setCollection.update_one(condition, {'$set': set_info})
 
             statusDict = statusCollection.find_one()
             if statusDict['real_ForkStatus'] == 1:
@@ -223,7 +229,7 @@ class NavRun(object):
                 "set_ForkStatus": 1
             }
             condition = {"_id": setDict["_id"]}
-            setCollection.update_one(condition, {'$set' : set_info})
+            setCollection.update_one(condition, {'$set': set_info})
 
             statusDict = statusCollection.find_one()
             if statusDict['real_ForkStatus'] == 2:
@@ -250,7 +256,8 @@ class NavRun(object):
                 # 恢复置位
                 statusDict = statusCollection.find_one()
                 condition = {"_id": statusDict["_id"]}
-                statusCollection.update_one(condition, {"$set": {"manual": False}})
+                statusCollection.update_one(
+                    condition, {"$set": {"manual": False}})
                 return True
 
             # 播放语音
@@ -267,7 +274,7 @@ class NavRun(object):
             # 到达充电桩，执行充电任务
             print("charge++++++++++++++++++++++")
             self.chargemsg.data = 1
-            for i in range(0,5):
+            for i in range(0, 5):
                 self.Charge_pub.publish(self.chargemsg)
                 time.sleep(0.5)
             self.AGV_operationDone = True
@@ -286,7 +293,6 @@ class NavRun(object):
                 self.wait_time -= 1
         return True
 
-
     def Make_Action(self):
         """ the callback of "do_operation" state """
         # operation achieve
@@ -296,11 +302,9 @@ class NavRun(object):
         if self.AGV_stationIndex == len(self.AGV_stationList) - 1:
             self.AGV_currentTime += 1
 
-
         elif self.AGV_stationIndex == len(self.AGV_stationList):
             if self.AGV_currentTime != self.AGV_goalTime:
                 self.AGV_stationIndex = 0
-
 
         navtask_info = {
             "current_station_index": self.AGV_stationIndex,
@@ -323,20 +327,21 @@ class NavRun(object):
                     RestoretaskCollection.delete_many({})
                     # 保存当前任务
                     if not SetDict["nav_idletask_run"]:
-                        navtask_Info = NavtaskCollection.find_one({},{"_id":0})
+                        navtask_Info = NavtaskCollection.find_one(
+                            {}, {"_id": 0})
                         navtask_Info["current_station_index"] = 0
                         RestoretaskCollection.insert_one(navtask_Info)
                     # 取消当前任务
                     navDict = NavtaskCollection.find_one()
-                    NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
+                    NavtaskCollection.update_one({"_id": navDict["_id"]}, {
+                                                 "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
                     return True
-                
+
             # change statu from do_operation to run_to_next_station
             self.send_start()
             return True
 
-
-    def First_Station(self, first_station:str):
+    def First_Station(self, first_station: str):
         """执行第一个点逻辑
 
         Args:
@@ -344,10 +349,13 @@ class NavRun(object):
         """
         # 寻找当前位置最近的站点
         status_Dict = statusCollection.find_one()
-        pos_current = {"x":status_Dict["x"], "y":status_Dict["y"], "angle":status_Dict["angle"]}
-        current_station, first_distance, first_angle = Station_Match(pos_current)
-        print("station is {}, distance is {}".format(current_station, first_distance))
-        
+        pos_current = {
+            "x": status_Dict["x"], "y": status_Dict["y"], "angle": status_Dict["angle"]}
+        current_station, first_distance, first_angle = Station_Match(
+            pos_current)
+        print("station is {}, distance is {}".format(
+            current_station, first_distance))
+
         # 判断AGV当前位置是否在站点上
         # if first_distance <= 0.25 and first_angle <= 10:
         if first_distance <= 0.25:
@@ -361,11 +369,11 @@ class NavRun(object):
                 return [current_station, first_station]
             # 如果不满足条件，则应该先寻路上到最近的站点
             else:
-                station_list = self.Find_Path_List(current_station, first_station)
+                station_list = self.Find_Path_List(
+                    current_station, first_station)
                 return [current_station] + station_list
 
-
-    def Find_Path_List(self, start_station:str, stop_station:str) ->list:
+    def Find_Path_List(self, start_station: str, stop_station: str) -> list:
         """找到一条任务链的路径列表
         1. 找到当前位置最近站点
         2. 从最近站点开始，找到任务链的路径列表
@@ -379,17 +387,22 @@ class NavRun(object):
         """
         # 寻找当前位置最近的站点
         status_Dict = statusCollection.find_one()
-        pos_current = {"x":status_Dict["x"], "y":status_Dict["y"], "angle":status_Dict["angle"]}
-        current_station, first_distance, first_angle = Station_Match(pos_current)
-        print("station is {}, distance is {}".format(current_station, first_distance))
-        
+        pos_current = {
+            "x": status_Dict["x"], "y": status_Dict["y"], "angle": status_Dict["angle"]}
+        current_station, first_distance, first_angle = Station_Match(
+            pos_current)
+        print("station is {}, distance is {}".format(
+            current_station, first_distance))
+
         if current_station == start_station:
             # 如果当前位置最近站点就是起始站点，则直接返回任务链的路径列表
             station_list = Station_BFS(start_station, stop_station, self.maps)
         else:
             # 如果当前位置最近站点不是起始站点，则需要先到达当前位置最近站点
-            to_start_list = Station_BFS(current_station, start_station, self.maps)
-            station_list = to_start_list[:-1] + Station_BFS(start_station, stop_station, self.maps)
+            to_start_list = Station_BFS(
+                current_station, start_station, self.maps)
+            station_list = to_start_list[:-1] + \
+                Station_BFS(start_station, stop_station, self.maps)
 
         # 增加路径不存在的异常保护
         if len(station_list) < 2:
@@ -399,14 +412,14 @@ class NavRun(object):
             tool.Run_ShellCmd("play "+VOICE_FOLD+ERROR_NAME)
             # 取消任务并阻塞
             navDict = NavtaskCollection.find_one()
-            NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
+            NavtaskCollection.update_one({"_id": navDict["_id"]}, {
+                                         "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
             # 直接退出程序
             return False
 
         return station_list
 
-
-    def Position_Info(self, station:str, station_list:list):
+    def Position_Info(self, station: str, station_list: list):
         """给定站点和路径列表，返回站点的位置信息
 
         Args:
@@ -425,7 +438,6 @@ class NavRun(object):
                 station_info.theta = item["dir"]
                 ignoreDir = item["ignoreDir"]
         return station_info, ignoreDir
-
 
     def GetPathData(self, station_start: str, station_stop: str, pathMsg):
         """返回每段路径的topic格式
@@ -452,8 +464,10 @@ class NavRun(object):
 
             # 起始终止站点信息
             station_list = pathSamp["advancedPointList"]
-            pathMsg.startPointPosition, _ = self.Position_Info(station_start, station_list)
-            pathMsg.endPointPosition, _ = self.Position_Info(station_stop, station_list)
+            pathMsg.startPointPosition, _ = self.Position_Info(
+                station_start, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(
+                station_stop, station_list)
             pathMsg.startPointID = station_start
             pathMsg.endPointID = station_stop
 
@@ -473,7 +487,7 @@ class NavRun(object):
                         middlePoint.append(anyPoint)
                     middlePoint.append(pathMsg.endPointPosition)
                     pathMsg.controlPoints = middlePoint
-    
+
                     break
             return pathMsg
 
@@ -488,8 +502,10 @@ class NavRun(object):
 
             # 起始终止站点信息
             station_list = path_dict["advancedPointList"]
-            pathMsg.startPointPosition, _ = self.Position_Info(station_start, station_list)
-            pathMsg.endPointPosition, ignoreDir = self.Position_Info(station_stop, station_list)
+            pathMsg.startPointPosition, _ = self.Position_Info(
+                station_start, station_list)
+            pathMsg.endPointPosition, ignoreDir = self.Position_Info(
+                station_stop, station_list)
             pathMsg.startPointID = station_start
             pathMsg.endPointID = station_stop
             pathMsg.ignoreDir = ignoreDir
@@ -518,18 +534,17 @@ class NavRun(object):
                     else:
                         pathMsg.lineType = 1
                         pathMsg.controlPointsCnt = 0
-    
+
                     break
             return pathMsg
-        
 
-    def Publish_Path(self, pathData:list):
+    def Publish_Path(self, pathData: list):
         """将找到的站点按照topic格式依次发布
 
         Args:
             pathData (list): 路径站点列表
         """
-        
+
         # print(pathData)
         for i in range(0, len(pathData)-1):
             pathMsg = PathSegment()
@@ -540,10 +555,9 @@ class NavRun(object):
             else:
                 pathMsg = self.GetPathData(pathData[i], pathData[i+1], pathMsg)
 
-
             print("seq_received is {}".format(self.seq_received))
             print("seq is {}".format(self.seq))
-            while self.seq_received != self.seq: #等待control收到信息
+            while self.seq_received != self.seq:  # 等待control收到信息
                 try:
                     if self.seq_received == -1:
                         # 路径跟随控制失败，需要取消任务并报错
@@ -553,7 +567,8 @@ class NavRun(object):
                         tool.Run_ShellCmd("play "+VOICE_FOLD+ERROR_NAME)
                         # 取消任务并阻塞
                         navDict = NavtaskCollection.find_one()
-                        NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
+                        NavtaskCollection.update_one({"_id": navDict["_id"]}, {
+                                                     "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
                         # 直接退出程序
                         return False
                     print(pathMsg)
@@ -563,9 +578,8 @@ class NavRun(object):
                     time.sleep(0.1)
                 except Exception as e:
                     print("publish error: {}".format(str(e)))
-        
-        
-    def Create_Line(self, station:str, pathMsg):
+
+    def Create_Line(self, station: str, pathMsg):
         """创建从当前点到目标站点的直线路径
 
         Args:
@@ -580,7 +594,7 @@ class NavRun(object):
         pathMsg.speedLimit = self.speed_limit
         pathMsg.controlPointsCnt = 0
         pathMsg.index = "current-{}".format(station)
-        pathMsg.ignoreDir = True #待修改
+        pathMsg.ignoreDir = True  # 待修改
         pathMsg.direction = False
 
         # 创建起始点
@@ -591,18 +605,19 @@ class NavRun(object):
         station_start.theta = status_Dict["angle"]
         pathMsg.startPointPosition = station_start
         pathMsg.startPointID = "current_position"
-        
+
         configDict = configCollection.find_one()
         teachFlag = configDict["plan_type"]
         # 人工示教方案
         if teachFlag:
             # 导入地图
-            with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
+            with open(PATH_MAP + PATH_OPTIMAL_MAP_NAME, "r", encoding="utf8") as f:
                 pathSamp = json.load(f)
 
             # 寻找目标点
             station_list = pathSamp["advancedPointList"]
-            pathMsg.endPointPosition, _ = self.Position_Info(station, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(
+                station, station_list)
             pathMsg.endPointID = station
 
         # 路径规划方案
@@ -613,11 +628,11 @@ class NavRun(object):
 
             # 寻找目标点
             station_list = path_dict["advancedPointList"]
-            pathMsg.endPointPosition, _ = self.Position_Info(station, station_list)
+            pathMsg.endPointPosition, _ = self.Position_Info(
+                station, station_list)
             pathMsg.endPointID = station
- 
+
         return pathMsg
-    
 
     def Send_Message(self):
         """每到达一个目标站点需要进行下一步路径点发送的操作
@@ -630,25 +645,26 @@ class NavRun(object):
                 # 说明当前就在第一个点上，直接到位
                 self.send_off()
                 NavtaskDict = NavtaskCollection.find_one()
-                task_info = {"tracking_end":True}
-                NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
+                task_info = {"tracking_end": True}
+                NavtaskCollection.update_one(
+                    {"_id": NavtaskDict["_id"]}, {"$set": task_info})
                 return True
         else:
             # 判断下一个站点是否与当前站点相同，如果相同则不下发路径
-            if self.AGV_stationList[self.AGV_stationIndex] == self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)]:
+            if self.AGV_stationList[self.AGV_stationIndex] == self.AGV_stationList[(self.AGV_stationIndex+1) % len(self.AGV_stationList)]:
                 self.send_off()
                 NavtaskDict = NavtaskCollection.find_one()
-                task_info = {"tracking_end":True}
-                NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
+                task_info = {"tracking_end": True}
+                NavtaskCollection.update_one(
+                    {"_id": NavtaskDict["_id"]}, {"$set": task_info})
                 return True
             else:
-                station_list = self.Find_Path_List(self.AGV_stationList[self.AGV_stationIndex], 
-                                                   self.AGV_stationList[(self.AGV_stationIndex+1)%len(self.AGV_stationList)])
+                station_list = self.Find_Path_List(self.AGV_stationList[self.AGV_stationIndex],
+                                                   self.AGV_stationList[(self.AGV_stationIndex+1) % len(self.AGV_stationList)])
         # send the path data to tracking topic
         self.Publish_Path(station_list)
         # change state from "run_to_next_station" to "wait_for_tracking"
         self.send_off()
-
 
     def Complete_Task(self):
         """ the callback of "do_operation" state change to "none" state """
@@ -658,7 +674,7 @@ class NavRun(object):
             "set_WheelAngle": 0
         }
         condition = {"_id": setDict["_id"]}
-        setCollection.update_one(condition, {'$set' : set_info})
+        setCollection.update_one(condition, {'$set': set_info})
 
         # change database
         navtask_info = {"task_run_status": COMPLETED}
@@ -675,16 +691,14 @@ class NavRun(object):
 
         return True
 
-
     def Out_Change_Log(self):
         """ print the out state """
-        print("The state is changing from {}".format(self.machine.get_model_state(self).name))
-
+        print("The state is changing from {}".format(
+            self.machine.get_model_state(self).name))
 
     def In_Change_Log(self):
         """ print the in state """
         print("To {}".format(self.machine.get_model_state(self).name))
-
 
     def __del__(self):
         setDict = setCollection.find_one()
@@ -693,10 +707,11 @@ class NavRun(object):
             "set_WheelAngle": 0
         }
         condition = {"_id": setDict["_id"]}
-        setCollection.update_one(condition, {'$set' : set_info})
+        setCollection.update_one(condition, {'$set': set_info})
 
 
 if __name__ == '__main__':
-    tool.Run_ShellCmd("play /home/ape/APE_Application/src/ape_single/script/utils/voicefile/manual.mp3")
+    tool.Run_ShellCmd(
+        "play /home/ape/APE_Application/src/ape_single/script/utils/voicefile/manual.mp3")
     # navtaskRun = NavRun("ape_run", 0, 0, 0, 0, 0)
     # draw_machine(navtaskRun.machine)

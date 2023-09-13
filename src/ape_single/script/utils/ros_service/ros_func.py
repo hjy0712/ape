@@ -379,7 +379,8 @@ def Ros_Pure_Location():
         return True
     # 打开纯定位
     pb_path = MAP + "origin/origin.pbstream"
-    AGV_nav.Start_Localization(pb_path)
+    yaml_path = MAP + "origin/origin.yaml"
+    AGV_nav.Start_Localization(pb_path, yaml_path)
 
     # 将定位状态置为false
     statusDict = statusCollection.find_one()
@@ -618,8 +619,9 @@ def Ros_Relocation(x, y, angle, auto):
          传入建图结束后的位姿
     """
     pb_path = MAP + "origin/origin.pbstream"
+    yaml_path = MAP + "origin/origin.yaml"
     if not AGV_nav.Check_Localization_Working():
-        AGV_nav.Start_Localization(pb_path)
+        AGV_nav.Start_Localization(pb_path, yaml_path)
     while not AGV_nav.Check_Localization_Working():
         print("Check_Localization_Working++++++++++++++++++++++++++++++++++++++")
 

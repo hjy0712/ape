@@ -22,6 +22,7 @@ DIDI_NAME = "didi.mp3"
 # AGVpath json path
 PATH_MAP = ROOT_PATH + "script/envs/path_map/"
 PATH_MAP_NAME = "origin.json"
+PATH_OPTIMAL_MAP_NAME = "optimal_origin.json"
 
 USER_ORIGIN_PATH_MAP_NAME = "user_origin_path.json"
 USER_PATH_MAP_NAME = "user_path.json"
@@ -60,30 +61,30 @@ LOC_COMPLETED = 3
 
 
 NAVTASK_INFO = {
-    "task_control_status":TASK_NONE,
-    "task_run_status":NONE,
-    "station_list":[],
-    "operation_list":[],
-    "current_station_index":0,
-    "given_run_time":0,
-    "current_run_time":0,
-    "tracking_end" : False
-    }
+    "task_control_status": TASK_NONE,
+    "task_run_status": NONE,
+    "station_list": [],
+    "operation_list": [],
+    "current_station_index": 0,
+    "given_run_time": 0,
+    "current_run_time": 0,
+    "tracking_end": False
+}
 
 SMAPDATA = {
-        "mapDirectory": "", 
-        "header": { 
-            "mapType": "2D-Map",
-            "mapName": "test",
-            "minPos": {},
-            "maxPos": {},
-            "resolution": 0,
-            "version": "1.0.6"
-        },
-        "normalPosList": [],
-        "advancedPointList": [],
-        "demonstrationPathList": [],
-    }
+    "mapDirectory": "",
+    "header": {
+        "mapType": "2D-Map",
+        "mapName": "test",
+        "minPos": {},
+        "maxPos": {},
+        "resolution": 0,
+        "version": "1.0.6"
+    },
+    "normalPosList": [],
+    "advancedPointList": [],
+    "demonstrationPathList": [],
+}
 
 # control node name
 CONTROL_NODE_NAME = "/motionControl"

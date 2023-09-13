@@ -264,12 +264,12 @@ def Config_Init():
         rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
         rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
     # 标定参数
-    if configDict["calibration_param"]["isSteeringAngleOffsetValid"]:
-        rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',configDict["calibration_param"]["steeringAngleOffset"])
-    if configDict["calibration_param"]["isLaserOffsetAngleValid"]:
-        rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',configDict["calibration_param"]["laserOffsetAngle"])
-    # rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',configDict["calibration_param"]["isLaserOffsetAngleValid"])
-    # rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',configDict["calibration_param"]["isSteeringAngleOffsetValid"])
+    # if configDict["calibration_param"]["isSteeringAngleOffsetValid"]:
+    rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',configDict["calibration_param"]["steeringAngleOffset"])
+    # if configDict["calibration_param"]["isLaserOffsetAngleValid"]:
+    rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',configDict["calibration_param"]["laserOffsetAngle"])
+    rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',configDict["calibration_param"]["isLaserOffsetAngleValid"])
+    rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',configDict["calibration_param"]["isSteeringAngleOffsetValid"])
     statusDict = statusCollection.find_one()
     if statusDict["real_ForkStatus"] == 1:
         # top fork

@@ -16,7 +16,8 @@ import math
 from utils.ros_service.map_type_convert import Map
 from utils.ros_service.path_type_convert import Path
 from utils.app_service.generic_func import *
-import json, fcntl
+import json
+import fcntl
 
 from utils.ros_service.navigation import Navigation
 from utils.ros_service.relocalization import ReLocalization
@@ -34,7 +35,7 @@ from ape_single.msg import ManualParameter
 AGV_nav = Navigation()
 AGV_reloc = None
 
-## data handle
+# data handle
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 # database
 apeDB = myclient["ape_db"]
@@ -51,9 +52,9 @@ def CollisionError(collision_dict):
     for key, value in collision_dict.items():
         if value != 0:
             # update status in database
-            statusCollection.update_one({}, {'$set' : {"collision": True}})
+            statusCollection.update_one({}, {'$set': {"collision": True}})
 
-            find_condition = {key:False}
+            find_condition = {key: False}
             find_result = configCollection.find_one(find_condition)
             if find_result == None:
                 Add_Error_DB(key + " collision")
@@ -62,21 +63,21 @@ def CollisionError(collision_dict):
             # clear restore error
             Reslove_Error_DB(key + " collision")
 
+
 def CollisionDetection(msg):
     """ collision detection function """
     hison_collision_dict = {"obstacle_left": msg.HINSON2_Detection,
-        "obstacle_right": msg.HINSON1_Detection
-    }
+                            "obstacle_right": msg.HINSON1_Detection
+                            }
     fork_collision_dict = {"fork_left": msg.forkLeft,
-        "fork_right": msg.forkRight
-    }
+                           "fork_right": msg.forkRight
+                           }
 
     configDict = configCollection.find_one()
     if not configDict["avoid_invalid"]:
         CollisionError(hison_collision_dict)
     CollisionError(fork_collision_dict)
-    
-                
+
 
 def apeMesCallback(msg):
     """将APE_Message中的信息提取到本地信息结构体中
@@ -96,14 +97,14 @@ def apeMesCallback(msg):
     # -------------- AGV碰撞状态 ------------- #
     # 初始化
     status_info = {
-                "collision": False,
-                "emergency": False
-            }
+        "collision": False,
+        "emergency": False
+    }
     statusUpdateDict.update(status_info)
     # statusCollection.update_one(condition, {'$set' : status_info})
 
     # 碰撞检测
-    CollisionDetection(msg) # 更新传感器信息
+    CollisionDetection(msg)  # 更新传感器信息
 
     # -------------- AGV错误状态 ------------- #
     errorDic = {
@@ -126,22 +127,21 @@ def apeMesCallback(msg):
             # clear error
             Reslove_Error_DB(errorDic[index])
 
-
-    ## TODO: add another error type
+    # TODO: add another error type
 
     # -------------- AGV信息 ------------- #
     # AGV速度和角度
-    statusUpdateDict.update({"real_VelocityVel": round(msg.velocityVel, 3), 
-                                "real_WheelAngle": round(msg.angleVel, 3),
-                                "batteryLevel": 0 if msg.batteryCapacityRatio!=msg.batteryCapacityRatio else msg.batteryCapacityRatio,
-                                "current": msg.batteryCurrent,
-                                "voltage": msg.batteryVoltage,
-                                "batteryTemp": msg.batteryTempterature})
+    statusUpdateDict.update({"real_VelocityVel": round(msg.velocityVel, 3),
+                             "real_WheelAngle": round(msg.angleVel, 3),
+                             "batteryLevel": 0 if msg.batteryCapacityRatio != msg.batteryCapacityRatio else msg.batteryCapacityRatio,
+                             "current": msg.batteryCurrent,
+                             "voltage": msg.batteryVoltage,
+                             "batteryTemp": msg.batteryTempterature})
 
     if msg.batteryCurrent < 0:
-        statusUpdateDict.update({"chargeOn":True})
+        statusUpdateDict.update({"chargeOn": True})
     else:
-        statusUpdateDict.update({"chargeOn":False})
+        statusUpdateDict.update({"chargeOn": False})
 
     # AGV货物到位
     if msg.inpositonLeft and msg.inpositonRight:
@@ -149,38 +149,36 @@ def apeMesCallback(msg):
 
     else:
         statusUpdateDict.update({"inPosition": False})
-    
 
     # AGV叉架状态
     if msg.inpositonUp == 1:
         statusUpdateDict.update({"real_ForkStatus": 1})
 
-
     elif msg.inpositonDown == 1:
         statusUpdateDict.update({"real_ForkStatus": 2})
-
 
     else:
         statusUpdateDict.update({"real_ForkStatus": 3})
 
-
     # 手自动状态，需要读取叉架状态
     statusUpdateDict.update({"manualAuto": msg.manualAuto})
 
-    statusCollection.update_one({}, {'$set' : statusUpdateDict})
+    statusCollection.update_one({}, {'$set': statusUpdateDict})
     # print("callback time:{}".format(time.time() - time_start))
-    
 
 
 def apeCartoCallback(msg):
     """ 订阅cartographer的topic，获取位置信息 """
     statusDict = statusCollection.find_one()
     condition = {"_id": statusDict["_id"]}
-    statusCollection.update_one(condition, {'$set' : {"x": round(msg.x, 5), "y": round(msg.y, 5), "angle": round(msg.theta, 5)}})
+    statusCollection.update_one(condition, {'$set': {"x": round(
+        msg.x, 5), "y": round(msg.y, 5), "angle": round(msg.theta, 5)}})
 
     # 当定位正确时，记录正确位置信息用于重定位
     if statusDict["reloc_status"] == LOC_SUCCESS:
-        statusCollection.update_one(condition, {'$set' : {"x_init": round(msg.x, 5), "y_init": round(msg.y, 5), "angle_init": round(msg.theta, 5)}})
+        statusCollection.update_one(condition, {'$set': {"x_init": round(
+            msg.x, 5), "y_init": round(msg.y, 5), "angle_init": round(msg.theta, 5)}})
+
 
 def apeSubmapCallback(msg):
     """ 订阅/submap_list，判断建图质量(子图个数) """
@@ -189,7 +187,8 @@ def apeSubmapCallback(msg):
         if subMapInfo.trajectory_id == 0 and subMapInfo.submap_index > 1 and subMapInfo.submap_version >= 1:
             statusDict = statusCollection.find_one()
             condition = {"_id": statusDict["_id"]}
-            statusCollection.update_one(condition, {'$set' : {"map_build_status": True}})
+            statusCollection.update_one(
+                condition, {'$set': {"map_build_status": True}})
             break
 
 # def Write_boardParam():
@@ -280,7 +279,6 @@ def apeSubmapCallback(msg):
 #         print("Service call failed: %s"%e)
 #     except Exception as e:
 #         print("Service call failed: %s"%e)
-    
 
 
 class Bottom_Operation(object):
@@ -288,12 +286,13 @@ class Bottom_Operation(object):
     def __init__(self) -> None:
         # 将定位状态置为failed
         statusDict = statusCollection.find_one()
-        statusCollection.update_one({"_id": statusDict["_id"]}, {"$set": {"reloc_status": LOC_FAILED}})
+        statusCollection.update_one({"_id": statusDict["_id"]}, {
+                                    "$set": {"reloc_status": LOC_FAILED}})
 
         # ------------ work time ---------------- #
         timeDict = timeCollection.find_one()
         condition = {"_id": timeDict["_id"]}
-        timeCollection.update_one(condition, {'$set' : {"current_time": 0}})
+        timeCollection.update_one(condition, {'$set': {"current_time": 0}})
 
         self.APESubMap_sub = None
         self.configDict = configCollection.find_one()
@@ -314,15 +313,14 @@ class Bottom_Operation(object):
 
         # 手动控制
         self.manualParameterMsg = ManualParameter()
-        self.manual_pub = rospy.Publisher(CONTROL_CMD_TOPIC_NAME, ManualParameter, queue_size=10)
+        self.manual_pub = rospy.Publisher(
+            CONTROL_CMD_TOPIC_NAME, ManualParameter, queue_size=10)
         self.manual_cmd = False
         self.manual_time = time.time()
-
 
     def dataDictUpdate(self):
         self.configDict = configCollection.find_one()
         self.setDict = setCollection.find_one()
-
 
     def avoidPub(self):
         if self.configDict["avoid_set"]:
@@ -337,7 +335,8 @@ class Bottom_Operation(object):
                 if self.configDict[key]:
                     APEAvoidMsg.data = APEAvoidMsg.data | (1 << value)
             APEAvoidPub.publish(APEAvoidMsg)
-            configCollection.update_one({"_id": self.configDict["_id"]}, {'$set' : {"avoid_set": False}})
+            configCollection.update_one({"_id": self.configDict["_id"]}, {
+                                        '$set': {"avoid_set": False}})
 
         # 判断避障失效区域
         # 当给定了消除避障区域时，需要修改避障模式
@@ -352,11 +351,12 @@ class Bottom_Operation(object):
                     no_avoid = True
                     APEAvoidMsg.data = 0 | (1 << 2) | (1 << 3)
                     APEAvoidPub.publish(APEAvoidMsg)
-                    configCollection.update_one({}, {"$set": {"avoid_invalid": True}})
+                    configCollection.update_one(
+                        {}, {"$set": {"avoid_invalid": True}})
                     break
             if not no_avoid:
-                configCollection.update_one({"_id": self.configDict["_id"]}, {'$set' : {"avoid_set": True}})
-                    
+                configCollection.update_one({"_id": self.configDict["_id"]}, {
+                                            '$set': {"avoid_set": True}})
 
     def manualPub(self):
         set_info = {}
@@ -365,7 +365,7 @@ class Bottom_Operation(object):
             speed = self.setDict["set_VelocityVel"]
             wheelAngle = self.setDict["set_WheelAngle"]
             wheelAngle = 180 * wheelAngle
-            
+
             # 货叉
             direction = self.setDict["set_ForkStatus"]
             if direction == 0:
@@ -379,7 +379,7 @@ class Bottom_Operation(object):
                 set_info = {
                     "set_ForkStatus": statusDict["real_ForkStatus"] - 1
                 }
-                setCollection.update_one({}, {'$set' : set_info})
+                setCollection.update_one({}, {'$set': set_info})
 
             # 发布topic
             self.manualParameterMsg.motorSpeed1 = speed
@@ -396,13 +396,14 @@ class Bottom_Operation(object):
                     if time.time() - self.manual_time > 2:
                         set_info["set_VelocityVel"] = 0
                         # set_info["set_WheelAngle"] = 0
-                        setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+                        setCollection.update_one(
+                            {"_id": self.setDict["_id"]}, {'$set': set_info})
                         self.manual_time = time.time()
             else:
                 self.manual_cmd = True
                 set_info["manual_set"] = False
-                setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
-
+                setCollection.update_one(
+                    {"_id": self.setDict["_id"]}, {'$set': set_info})
 
     def pumpPub(self):
         direction = self.setDict["set_ForkStatus"]
@@ -416,8 +417,7 @@ class Bottom_Operation(object):
             set_info = {
                 "set_ForkStatus": statusDict["real_ForkStatus"] - 1
             }
-            setCollection.update_one({}, {'$set' : set_info})
-
+            setCollection.update_one({}, {'$set': set_info})
 
     def pathconvert(self):
         set_info = {}
@@ -426,27 +426,31 @@ class Bottom_Operation(object):
             self.AGV_pathConvert.Clear_Path()
             self.AGV_pathConvert.Start_Subscribe()
             set_info["path_convert_start"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
         if self.setDict["path_convert_stop"]:
             self.AGV_pathConvert.Stop_Subscribe()
             Path_Combine()
             set_info["path_convert_stop"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
-
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
     def mapconvert(self):
         set_info = {}
         if self.setDict["map_convert_start"]:
             # 建图之前应当先把建图成功状态置为false
             statusDict = statusCollection.find_one()
-            statusCollection.update_one({"_id": statusDict["_id"]}, {'$set' : {"map_build_status": False}})
+            statusCollection.update_one({"_id": statusDict["_id"]}, {
+                                        '$set': {"map_build_status": False}})
 
             self.AGV_mapConvert.restart_convert(MAP+MAP_NAME)
             self.AGV_mapConvert.Start_Subscribe(MAP+MAP_NAME)
-            self.APESubMap_sub = rospy.Subscriber('/submap_list', SubmapList, apeSubmapCallback)
+            self.APESubMap_sub = rospy.Subscriber(
+                '/submap_list', SubmapList, apeSubmapCallback)
             set_info["map_convert_start"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
         if self.setDict["map_convert_stop"]:
             if AGV_nav.Check_Slam_Working():
@@ -459,13 +463,14 @@ class Bottom_Operation(object):
                     self.APESubMap_sub.unregister()
                 except Exception as e:
                     print(e)
-                
+
                 AGV_nav.Kill_Slam()
 
                 # 打开纯定位
                 pb_path = MAP + "origin/origin.pbstream"
+                yaml_path = MAP + "origin/origin.yaml"
                 if not AGV_nav.Check_Localization_Working():
-                    AGV_nav.Start_Localization(pb_path)
+                    AGV_nav.Start_Localization(pb_path, yaml_path)
 
                 with open(MAP+MAP_NAME, "r", encoding="utf8") as f:
                     fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -478,16 +483,19 @@ class Bottom_Operation(object):
                 self.min_y = mapJson["minPos"]["y"]
                 # 写入数据库
                 statusDict = statusCollection.find_one()
-                statusCollection.update_one({"_id": statusDict["_id"]}, {"$set":{"max_x": self.max_x, "max_y": self.max_y, "min_x": self.min_x, "min_y": self.min_y}})
+                statusCollection.update_one({"_id": statusDict["_id"]}, {"$set": {
+                                            "max_x": self.max_x, "max_y": self.max_y, "min_x": self.min_x, "min_y": self.min_y}})
 
                 # 进行重定位
-                setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": {"relocation_start":True}})
+                setCollection.update_one({"_id": self.setDict["_id"]}, {
+                                         "$set": {"relocation_start": True}})
 
                 # 打开置信度节点
                 tool.Run_ShellCmd("rosrun ape_single app_trust.py")
-            
+
             set_info["map_convert_stop"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
         if self.setDict["map_convert_cancel"]:
             if AGV_nav.Check_Slam_Working():
@@ -499,12 +507,12 @@ class Bottom_Operation(object):
                     self.APESubMap_sub.unregister()
                 except Exception as e:
                     print(e)
-                
+
                 AGV_nav.Kill_Slam()
-            
+
             set_info["map_convert_cancel"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
-            
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
     def reloc(self):
         set_info = {}
@@ -512,8 +520,10 @@ class Bottom_Operation(object):
             try:
                 json_path = MAP + MAP_NAME
                 statusDict = statusCollection.find_one()
-                x_tf = statusDict["x_init"] + 1.04502873640911*math.cos(statusDict["angle_init"]) - 0.315999999999994*math.sin(statusDict["angle_init"])
-                y_tf = statusDict["y_init"] + 1.04502873640911*math.sin(statusDict["angle_init"]) + 0.315999999999994*math.cos(statusDict["angle_init"])
+                x_tf = statusDict["x_init"] + 1.04502873640911*math.cos(
+                    statusDict["angle_init"]) - 0.315999999999994*math.sin(statusDict["angle_init"])
+                y_tf = statusDict["y_init"] + 1.04502873640911*math.sin(
+                    statusDict["angle_init"]) + 0.315999999999994*math.cos(statusDict["angle_init"])
                 if x_tf < self.min_x or x_tf > self.max_x or y_tf < self.min_y or y_tf > self.max_y:
                     print("11111111")
                     raise Exception("the relocation data is bad")
@@ -521,13 +531,16 @@ class Bottom_Operation(object):
 
                 # 将定位状态置为complete
                 statusDict = statusCollection.find_one()
-                statusCollection.update_one({"_id": statusDict["_id"]}, {"$set": {"reloc_status": LOC_COMPLETED}})
+                statusCollection.update_one({"_id": statusDict["_id"]}, {
+                                            "$set": {"reloc_status": LOC_COMPLETED}})
             except:
                 # 将定位状态置为false
                 statusDict = statusCollection.find_one()
-                statusCollection.update_one({"_id": statusDict["_id"]}, {"$set": {"reloc_status": LOC_FAILED}})
+                statusCollection.update_one({"_id": statusDict["_id"]}, {
+                                            "$set": {"reloc_status": LOC_FAILED}})
             set_info["relocation_start"] = False
-            setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' : set_info})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {'$set': set_info})
 
     def Charge(self):
         # 检测电池电量
@@ -536,16 +549,17 @@ class Bottom_Operation(object):
         # 触发低电量预警
         if (not self.setDict["charge_do_work"]) and not configDict["auto_charge"] and statusDict["batteryLevel"] < configDict["low_charge_value"]*100:
             if time.time() - self.time_stamp > 60:
-                tool.Run_ShellCmd("play "+ VOICE_FOLD+CHARGE_NAME)
+                tool.Run_ShellCmd("play " + VOICE_FOLD+CHARGE_NAME)
                 self.time_stamp = time.time()
-                
+
         # 增加充电刷板的保护逻辑
         # 如果正在执行充电任务，判断充电电流是否为负，如果为负，则充电工作开启
         if self.setDict["charge_do_open"] and not self.setDict["charge_do_work"]:
             if statusDict["current"] < 0:
-                setCollection.update_one({}, {"$set":{"charge_do_work": True}})
-                statusCollection.update_one({}, {"$set":{"chargeOn": True}})
-        
+                setCollection.update_one(
+                    {}, {"$set": {"charge_do_work": True}})
+                statusCollection.update_one({}, {"$set": {"chargeOn": True}})
+
         # 如果充电任务执行中，小车开始运动，则充电关闭
         if self.setDict["charge_do_open"] and self.setDict["charge_do_work"]:
             if abs(statusDict["real_VelocityVel"]) > 0.001:
@@ -553,8 +567,9 @@ class Bottom_Operation(object):
                 self.chargemsg.data = 0
                 self.Charge_pub.publish(self.chargemsg)
                 # 自动充电重新置位
-                setCollection.update_one({"_id": self.setDict["_id"]}, {'$set' :{"start_charge": False, "charge_do_open": False, "charge_do_work": False}})
-                statusCollection.update_one({}, {"$set":{"chargeOn": False}})
+                setCollection.update_one({"_id": self.setDict["_id"]}, {'$set': {
+                                         "start_charge": False, "charge_do_open": False, "charge_do_work": False}})
+                statusCollection.update_one({}, {"$set": {"chargeOn": False}})
 
         # 触发自动充电
         if configDict["auto_charge"] and statusDict["batteryLevel"] < configDict["low_charge_value"]*100:
@@ -563,7 +578,8 @@ class Bottom_Operation(object):
                 "finish_charge": False
             }
 
-            setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": setInfo})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {"$set": setInfo})
 
         # 在还没有开始充电之前，需要考虑用户自己取消自动充电的情况
         # 无论是否开始充电，用户取消自动充电功能
@@ -583,21 +599,23 @@ class Bottom_Operation(object):
                         "set_VelocityVel": 0,
                         "set_WheelAngle": 0
                     }
-                    setCollection.update_one({}, {'$set' : set_info})
+                    setCollection.update_one({}, {'$set': set_info})
 
                     # change database
                     navtask_info = {
                         "task_control_status": TASK_CANCELED,
                         "task_run_status": CANCELED
-                        }
+                    }
                     condition = {"_id": navDict["_id"]}
-                    NavtaskCollection.update_one(condition, {'$set': navtask_info})
+                    NavtaskCollection.update_one(
+                        condition, {'$set': navtask_info})
 
                 # 关闭DO
                 self.chargemsg.data = 0
                 self.Charge_pub.publish(self.chargemsg)
 
-                setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": setInfo})
+                setCollection.update_one(
+                    {"_id": self.setDict["_id"]}, {"$set": setInfo})
 
             # when we have restored loop task, and auto-charge close, need to stop charge
             elif (not configDict["auto_charge"]) and self.setDict["charge_do_work"] and RestoretaskCollection.find_one() != None:
@@ -613,8 +631,8 @@ class Bottom_Operation(object):
                 self.chargemsg.data = 0
                 self.Charge_pub.publish(self.chargemsg)
 
-                setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": setInfo})
-
+                setCollection.update_one(
+                    {"_id": self.setDict["_id"]}, {"$set": setInfo})
 
         if self.setDict["stop_charge"] or (self.setDict["start_charge"] and statusDict["batteryLevel"] >= 90):
             # 停止充电
@@ -627,12 +645,14 @@ class Bottom_Operation(object):
                 "charge_do_open": False,
                 "charge_do_work": False
             }
-            setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": setInfo})
+            setCollection.update_one(
+                {"_id": self.setDict["_id"]}, {"$set": setInfo})
 
         if self.setDict["set_ChargeTrigger"]:
             self.chargemsg.data = self.setDict["set_ChargeStatus"]
             self.Charge_pub.publish(self.chargemsg)
-            setCollection.update_one({"_id": self.setDict["_id"]}, {"$set": {"set_ChargeTrigger":False}})
+            setCollection.update_one({"_id": self.setDict["_id"]}, {
+                                     "$set": {"set_ChargeTrigger": False}})
 
     def Update_Worktime(self):
         """ update work_time,  5 HZ """
@@ -640,8 +660,9 @@ class Bottom_Operation(object):
         condition = {"_id": timeDict["_id"]}
         total_seconds = timeDict["total_time"] + 0.2
         current_seconds = timeDict["current_time"] + 0.2
-        timeCollection.update_one(condition, {'$set' : {"total_time":total_seconds, "current_time":current_seconds}})
-    
+        timeCollection.update_one(condition, {
+                                  '$set': {"total_time": total_seconds, "current_time": current_seconds}})
+
     def doOperation(self):
         self.dataDictUpdate()
         self.avoidPub()
@@ -654,7 +675,7 @@ class Bottom_Operation(object):
 
         self.Charge()
 
-    
+
 if __name__ == "__main__":
 
     # ------------------ init -------------------- #
@@ -662,7 +683,8 @@ if __name__ == "__main__":
 
     rospy.init_node('ape_app_control')
     APEMes_sub = rospy.Subscriber('/APE_Message', APE_Message, apeMesCallback)
-    Carto_sub = rospy.Subscriber('/APETrack/PoseData', Pose2D, apeCartoCallback)
+    Carto_sub = rospy.Subscriber(
+        '/APETrack/PoseData', Pose2D, apeCartoCallback)
     APEVeloMsg = Twist()
     APEPumpMsg = UInt8()
     APEAvoidMsg = UInt8()
@@ -673,9 +695,8 @@ if __name__ == "__main__":
     APEVeloPub = rospy.Publisher('/APE_Velo', Twist, queue_size=10)
     APEPumpPub = rospy.Publisher('/APE_Pump', UInt8, queue_size=10)
     APEAvoidPub = rospy.Publisher('/APE_AvoidCollison', UInt8, queue_size=10)
-    
-    rate = rospy.Rate(5)
 
+    rate = rospy.Rate(5)
 
     # ------------------ publish ----------------- #
 

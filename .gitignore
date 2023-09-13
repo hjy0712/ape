@@ -11,4 +11,5 @@ src/ape_single/script/logs/*.log*
 !src/ape_single/script/envs/path_map/.gitkeep
 !src/ape_single/script/logs/.gitkeep
 __pycache__
-
+src/ape_single/script/app_charge.py
+src/ape_single/script/app_map_server.py

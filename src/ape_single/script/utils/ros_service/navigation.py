@@ -5,6 +5,7 @@ from utils.tool import *
 import time
 import os
 
+
 class Navigation:
     """
     This is a class for APE vehicle navigation and positioning
@@ -22,7 +23,6 @@ class Navigation:
     7. Kill_Localization().
     """
 
-
     __isRosLaserOpen = 1
     __isRosTFtreeOpen = 1
     __isRosSlamOpen = 0
@@ -30,10 +30,12 @@ class Navigation:
 
     __RosTFtreeNode = ["/robot_state_publisher"]
     __RosLaserNode = ["/r2000_node"]
-    __RosSlamNode = ["/cartographer_node","/cartographer_occupancy_grid_node"]
-    __RosLocNode = ["/cartographer_node_localization","/cartographer_occupancy_grid_node_localization"]
+    __RosSlamNode = ["/cartographer_node", "/cartographer_occupancy_grid_node"]
+    __RosLocNode = ["/cartographer_node_localization",
+                    "/cartographer_occupancy_grid_node_localization"]
 
     __lastMapName = ""
+    yaml_file = ""
 
     def __init__(self) -> None:
         if not (self.Check_Laser_Working() and self.Check_TFtree_Working()):
@@ -57,7 +59,7 @@ class Navigation:
     def Start_TFtree(self) -> str:
         Run_ShellCmd("roslaunch ape_coordinate ape_tftree.launch")
         self.__RosTFtreeNode = 1
-    
+
     def Start_Slam(self) -> str:
         """
         func: start slam in cartographer
@@ -69,7 +71,7 @@ class Navigation:
         }
         """
         try:
-            if(not self.__isRosSlamOpen):
+            if (not self.__isRosSlamOpen):
                 os.popen("roslaunch ape_coordinate carto_slam.launch")
                 # Run_ShellCmd("roslaunch ape_coordinate carto_slam.launch")
                 self.__isRosSlamOpen = 1
@@ -89,7 +91,8 @@ class Navigation:
         }
         """
         rosNodeList = Ros_Get_NodeList()
-        if [x for x in self.__RosLaserNode if x not in rosNodeList] == []:  #如果lasernode不在当前nodelist中的项是空的，则开着
+        # 如果lasernode不在当前nodelist中的项是空的，则开着
+        if [x for x in self.__RosLaserNode if x not in rosNodeList] == []:
             self.__isRosLaserOpen = 1
             return 1
         else:
@@ -105,7 +108,8 @@ class Navigation:
         }
         """
         rosNodeList = Ros_Get_NodeList()
-        if [x for x in self.__RosTFtreeNode if x not in rosNodeList] == []:  #如果TFnode不在当前nodelist中的项是空的，则开着
+        # 如果TFnode不在当前nodelist中的项是空的，则开着
+        if [x for x in self.__RosTFtreeNode if x not in rosNodeList] == []:
             self.__isRosTFtreeOpen = 1
             return 1
         else:
@@ -121,7 +125,8 @@ class Navigation:
         }
         """
         rosNodeList = Ros_Get_NodeList()
-        if [x for x in self.__RosSlamNode if x not in rosNodeList] == []:  #如果Slamnode不在当前nodelist中的项是空的，则开着
+        # 如果Slamnode不在当前nodelist中的项是空的，则开着
+        if [x for x in self.__RosSlamNode if x not in rosNodeList] == []:
             self.__isRosSlamOpen = 1
             return 1
         else:
@@ -137,7 +142,7 @@ class Navigation:
         }
         """
         rosNodeList = Ros_Get_NodeList()
-        if [x for x in self.__RosLocNode if x not in rosNodeList] == []:  #如果Locnode不在当前nodelist中的项是空的，则开着
+        if [x for x in self.__RosLocNode if x not in rosNodeList] == []:  # 如果Locnode不在当前nodelist中的项是空的，则开着
             self.__isRosLocOpen = 1
             return 1
         else:
@@ -162,10 +167,10 @@ class Navigation:
         """
         func: stop receiving slam message,but don't kill node
         """
-        res = Run_ShellCmd("rosservice call /finish_trajectory 0",output=1)
+        res = Run_ShellCmd("rosservice call /finish_trajectory 0", output=1)
         print("rosservice call /finish_trajectory 0 result if {}".format(res))
 
-    def Save_SlamMap(self, mapName:str = "defaultMap", filepath:str = "") -> str:
+    def Save_SlamMap(self, mapName: str = "defaultMap", filepath: str = "") -> str:
         """
         func: save slam map 
         Inputs: 
@@ -179,32 +184,34 @@ class Navigation:
         }
         """
         if filepath == "":
-            filepath = os.path.abspath('.')  #默认地址是程序当前地址
+            filepath = os.path.abspath('.')  # 默认地址是程序当前地址
             filepath = filepath + "/map/"
         elif not filepath[-1] == "/":
             raise ValueError("file path need to end with '/'")
 
         filepath = filepath + mapName + "/"
         file = filepath + mapName + ".pbstream"
+
         print("SAVE MAP TO:  " + file)
-        
+
         folder = os.path.exists(filepath)
-    
-        if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
-            os.makedirs(filepath)            #makedirs 创建文件时如果路径不存在会创建这个路径
-                
+
+        if not folder:  # 判断是否存在文件夹如果不存在则创建为文件夹
+            os.makedirs(filepath)  # makedirs 创建文件时如果路径不存在会创建这个路径
 
         # Run_ShellCmd("mkdir " + filepath)
 
         self.__lastMapName = file
-        #输出 pbstream
-        Run_ShellCmd("rosservice call /write_state  \"{filename: '" + file + "'}\"",output=1) 
-        #输出 yaml and image:
-        Run_ShellCmd("rosrun cartographer_ros cartographer_pbstream_to_ros_map -map_filestem="+ filepath + mapName + \
-            " -pbstream_filename=" + file + " -resolution=0.02",output=1)
+        self.yaml_file = filepath + mapName + ".yaml"
+        # 输出 pbstream
+        Run_ShellCmd(
+            "rosservice call /write_state  \"{filename: '" + file + "'}\"", output=1)
+        # 输出 yaml and image:
+        Run_ShellCmd("rosrun cartographer_ros cartographer_pbstream_to_ros_map -map_filestem=" + filepath + mapName +
+                     " -pbstream_filename=" + file + " -resolution=0.05", output=1)
 
 # ---------------------  start and stop localization  -------------------
-    def Start_Localization(self,PbstreamFile:str = "") -> None:
+    def Start_Localization(self, PbstreamFile: str = "", YamlFile: str = "") -> None:
         """
         func: start only localization in cartographer
         Inputs: 
@@ -218,8 +225,18 @@ class Navigation:
                 raise ValueError("NO Map input or no Slam history")
             else:
                 PbstreamFile = self.__lastMapName
-        #print("roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
-        Run_ShellCmd("roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
+
+        if YamlFile == "":
+            if self.yaml_file == "":
+                raise ValueError("NO Map input or no Slam history")
+            else:
+                YamlFile = self.yaml_file
+        # print("roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
+        Run_ShellCmd(
+            "roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
+        time.sleep(1.5)
+        Run_ShellCmd(
+            "roslaunch APETrack/PoseDataor_loc reflector_local.launch map_file:=" + YamlFile)
         self.__isRosLocOpen = 1
 
     def Kill_Localization(self) -> None:
@@ -234,10 +251,12 @@ class Navigation:
             Run_ShellCmd("rosnode kill " + eachNode)
         self.__isRosLocOpen = 0
 
+
 if __name__ == "__main__":
     pass
     nav = Navigation()
-    nav.Start_Localization("/home/ape/ape_-android-app/src/ape_apphost/script/map/origin/origin.pbstream")
+    nav.Start_Localization(
+        "/home/ape/ape_-android-app/src/ape_apphost/script/map/origin/origin.pbstream")
     # result.read()
     # result.close()
     # output = result.read()
