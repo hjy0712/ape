@@ -1,6 +1,7 @@
 #!/home/ape/miniconda3/envs/flask/bin/python
 # -*- coding: utf-8 -*-
 
+import errno
 import rospy
 from std_srvs.srv import Empty, EmptyResponse
 from std_msgs.msg import Bool
@@ -12,7 +13,8 @@ from navigation_run import NavRun, draw_machine
 import pymongo
 from transitions import Machine
 
-import time, json
+import time
+import json
 
 from utils.app_service.generic_func import *
 
@@ -46,57 +48,58 @@ class NavTask(object):
         self.apeRun = None
 
         # Initialize the state machine
-        self.machine = Machine(model=self, states=NavTask.states, initial='idle')
+        self.machine = Machine(
+            model=self, states=NavTask.states, initial='idle')
 
         # when the control is on, need to start nav at anytime
-        self.machine.add_transition(trigger='control_on', source=['start', 'stop','idle'], dest='start',
-                         after=['In_Change_Log', 'Start_Nav'], before='Out_Change_Log')
+        self.machine.add_transition(trigger='control_on', source=['start', 'stop', 'idle'], dest='start',
+                                    after=['In_Change_Log', 'Start_Nav'], before='Out_Change_Log')
 
         # when suspend, need to stop, aka stop the agv
         self.machine.add_transition('suspend', 'start', 'stop',
-                         after=['In_Change_Log', "Stop_Nav"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Stop_Nav"], before='Out_Change_Log')
 
         # when suspend, need to stop, aka stop the agv
         self.machine.add_transition('restart', 'stop', 'start',
-                         after=['In_Change_Log', "Restart_Nav"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Restart_Nav"], before='Out_Change_Log')
 
         # when cancel, need to stop, aka stop the agv
         self.machine.add_transition('cancel', ['start', 'stop'], 'idle',
-                         after=['In_Change_Log', "Cancel_Nav"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Cancel_Nav"], before='Out_Change_Log')
 
         # when complete, need to stop, aka stop the agv
         self.machine.add_transition('complete', 'start', 'idle',
-                         after=['In_Change_Log', "Complete_Nav"], before='Out_Change_Log')
+                                    after=['In_Change_Log', "Complete_Nav"], before='Out_Change_Log')
 
-        self.Tracking_Sever = rospy.Service(CONTROL_TRACK_SERVICE_NAME, Empty, self.handle_tracking)
+        self.Tracking_Sever = rospy.Service(
+            CONTROL_TRACK_SERVICE_NAME, Empty, self.handle_tracking)
 
-        self.Mode_Topic = rospy.Publisher(CONTROL_MODE_TOPIC_NAME, Bool, queue_size = 10)
+        self.Mode_Topic = rospy.Publisher(
+            CONTROL_MODE_TOPIC_NAME, Bool, queue_size=10)
         modeType = Bool()
-        modeType.data = False # 开始的时候置为手动模式
-        for i in range(0,5):
+        modeType.data = False  # 开始的时候置为手动模式
+        for i in range(0, 5):
             self.Mode_Topic.publish(modeType)
             time.sleep(0.1)
-
 
     def handle_tracking(self, req):
         """ the callback of 'tracking_status' service """
         # tracking任务执行结束
         # 不能直接在回调中做状态转换触发，可能会出现在 run_to_next_station 状态下进入回调
         NavtaskDict = NavtaskCollection.find_one()
-        task_info = {"tracking_end":True}
-        NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": task_info})
+        task_info = {"tracking_end": True}
+        NavtaskCollection.update_one(
+            {"_id": NavtaskDict["_id"]}, {"$set": task_info})
         return EmptyResponse()
-
 
     def Out_Change_Log(self):
         """ print the out state """
-        print("The state is changing from {}".format(self.machine.get_model_state(self).name))
-
+        print("The state is changing from {}".format(
+            self.machine.get_model_state(self).name))
 
     def In_Change_Log(self):
         """ print the in state """
         print("To {}".format(self.machine.get_model_state(self).name))
-
 
     def Start_Nav(self):
         """ the callback of idle statu to start statu  """
@@ -116,9 +119,8 @@ class NavTask(object):
 
         # 运行子状态机
         self.apeRun = NavRun("ape_run", taskDict["station_list"], taskDict["operation_list"],
-                    AGV_stationIndex, taskDict["given_run_time"], taskDict["current_run_time"])
+                             AGV_stationIndex, taskDict["given_run_time"], taskDict["current_run_time"])
         self.apeRun.send_start()
-
 
     def Stop_Nav(self):
         print("The navigation is stop")
@@ -130,16 +132,16 @@ class NavTask(object):
         try:
             if CONTROL_NODE_NAME in node_list:
                 rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
-                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                PauseTracking = rospy.ServiceProxy(
+                    CONTROL_TASK_SERVICE_NAME, TaskStatus)
                 resp1 = PauseTracking(0)
                 return resp1.success
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
+            print("Service call failed: %s" % e)
         except Exception as e:
-            print("Service call failed: %s"%e)
-
+            print("Service call failed: %s" % e)
 
     def Restart_Nav(self):
         print("The navigation is restart")
@@ -152,16 +154,16 @@ class NavTask(object):
         try:
             if CONTROL_NODE_NAME in node_list:
                 rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
-                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                PauseTracking = rospy.ServiceProxy(
+                    CONTROL_TASK_SERVICE_NAME, TaskStatus)
                 resp1 = PauseTracking(1)
                 return resp1.success
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
+            print("Service call failed: %s" % e)
         except Exception as e:
-            print("Service call failed: %s"%e)
-
+            print("Service call failed: %s" % e)
 
     def Cancel_Nav(self):
         print("The navigation is canceled")
@@ -171,15 +173,16 @@ class NavTask(object):
         try:
             if CONTROL_NODE_NAME in node_list:
                 rospy.wait_for_service(CONTROL_TASK_SERVICE_NAME)
-                PauseTracking = rospy.ServiceProxy(CONTROL_TASK_SERVICE_NAME, TaskStatus)
+                PauseTracking = rospy.ServiceProxy(
+                    CONTROL_TASK_SERVICE_NAME, TaskStatus)
                 resp1 = PauseTracking(2)
                 return resp1.success
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
+            print("Service call failed: %s" % e)
         except Exception as e:
-            print("Service call failed: %s"%e)
+            print("Service call failed: %s" % e)
 
         # finish navtaskrun's state machine
         del self.apeRun
@@ -193,8 +196,8 @@ class NavTask(object):
         # 切换速度控制权
         setDict = setCollection.find_one()
         condition = {"_id": setDict["_id"]}
-        setCollection.update_one(condition, {'$set' : {"nav_start": False,"nav_idletask_run": False}})
-
+        setCollection.update_one(
+            condition, {'$set': {"nav_start": False, "nav_idletask_run": False}})
 
     def Complete_Nav(self):
         print("The navigation is completed")
@@ -214,10 +217,11 @@ class NavTask(object):
         if setDict["nav_idletask"]:
             setDict = setCollection.find_one()
             condition = {"_id": setDict["_id"]}
-            setCollection.update_one(condition, {'$set' : {"nav_idletask": False, "nav_idletask_run": True}})
+            setCollection.update_one(
+                condition, {'$set': {"nav_idletask": False, "nav_idletask_run": True}})
 
             # 将idle任务链复制到main任务链中
-            navtask_Info = IdletaskCollection.find_one({},{"_id":0})
+            navtask_Info = IdletaskCollection.find_one({}, {"_id": 0})
             navtaskDict = NavtaskCollection.find_one()
             condition = {"_id": navtaskDict["_id"]}
             NavtaskCollection.update_one(condition, {'$set': navtask_Info})
@@ -227,13 +231,13 @@ class NavTask(object):
             modeType = Bool()
             modeType.data = False
             self.Mode_Topic.publish(modeType)
-            
+
             # 切换速度控制权
             setDict = setCollection.find_one()
             condition = {"_id": setDict["_id"]}
-            setCollection.update_one(condition, {'$set' : {"nav_start": False, "nav_idletask_run": False}})
+            setCollection.update_one(
+                condition, {'$set': {"nav_start": False, "nav_idletask_run": False}})
 
-import errno
 
 def Config_Init():
     """初始化配置参数
@@ -256,20 +260,30 @@ def Config_Init():
     # vehicleParameterPub.publish(vehicleParameterMsg)
     configDict = configCollection.find_one()
     if configDict["config_change"]:
-        rospy.set_param('/APE_VehicleParameter/wheelX',configDict["body_param"]["unlift_wheelbase"])
-        rospy.set_param('/APE_VehicleParameter/wheelY',0) # 没有此参数，等待整理
-        rospy.set_param('/APE_VehicleParameter/wheelXCargo',configDict["body_param"]["lift_wheelbase"])
-        rospy.set_param('/APE_VehicleParameter/controlPointX',configDict["body_param"]["zero_position"])
-        rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',configDict["body_param"]["center_deviation"])
-        rospy.set_param('/APE_VehicleParameter/wheelZeroBiasBackward1',0) # 没有此参数，等待整理
-        rospy.set_param('/APE_VehicleParameter/RotationSteerAngle',0) # 没有此参数，等待整理
+        rospy.set_param('/APE_VehicleParameter/wheelX',
+                        configDict["body_param"]["unlift_wheelbase"])
+        rospy.set_param('/APE_VehicleParameter/wheelY', 0)  # 没有此参数，等待整理
+        rospy.set_param('/APE_VehicleParameter/wheelXCargo',
+                        configDict["body_param"]["lift_wheelbase"])
+        rospy.set_param('/APE_VehicleParameter/controlPointX',
+                        configDict["body_param"]["zero_position"])
+        rospy.set_param('/APE_VehicleParameter/wheelZeroBiasForward1',
+                        configDict["body_param"]["center_deviation"])
+        rospy.set_param(
+            '/APE_VehicleParameter/wheelZeroBiasBackward1', 0)  # 没有此参数，等待整理
+        rospy.set_param(
+            '/APE_VehicleParameter/RotationSteerAngle', 0)  # 没有此参数，等待整理
     # 标定参数
     # if configDict["calibration_param"]["isSteeringAngleOffsetValid"]:
-    rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',configDict["calibration_param"]["steeringAngleOffset"])
+    rospy.set_param('/APE_CalibrationParameter/steeringAngleOffset',
+                    configDict["calibration_param"]["steeringAngleOffset"])
     # if configDict["calibration_param"]["isLaserOffsetAngleValid"]:
-    rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',configDict["calibration_param"]["laserOffsetAngle"])
-    rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',configDict["calibration_param"]["isLaserOffsetAngleValid"])
-    rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',configDict["calibration_param"]["isSteeringAngleOffsetValid"])
+    rospy.set_param('/APE_CalibrationParameter/laserOffsetAngle',
+                    configDict["calibration_param"]["laserOffsetAngle"])
+    rospy.set_param('/APE_CalibrationParameter/isLaserOffsetAngleValid',
+                    configDict["calibration_param"]["isLaserOffsetAngleValid"])
+    rospy.set_param('/APE_CalibrationParameter/isSteeringAngleOffsetValid',
+                    configDict["calibration_param"]["isSteeringAngleOffsetValid"])
     statusDict = statusCollection.find_one()
     if statusDict["real_ForkStatus"] == 1:
         # top fork
@@ -279,6 +293,9 @@ def Config_Init():
         # fork down
         rospy.set_param('/APE_CalibrationParameter/forkOffsetY', 0)
         rospy.set_param('/APE_CalibrationParameter/forkOffsetX', 0)
+    # 激光雷达位置偏置
+    rospy.set_param("/APE_CalibrationParameter/laserOffsetX", 0)
+    rospy.set_param("/APE_CalibrationParameter/laserOffsetY", 0)
     return True
 
 
@@ -290,20 +307,20 @@ if __name__ == "__main__":
     navtask_info = {
         "task_control_status": TASK_NONE,
         "task_run_status": NONE
-        }
+    }
     navtaskDict = NavtaskCollection.find_one()
     condition = {"_id": navtaskDict["_id"]}
     NavtaskCollection.update_one(condition, {'$set': navtask_info})
-    
+
     # 初始化参数
     configCollection.update_one({}, {"$set": {"config_change": True}})
 
     set_info = {
-        "nav_start" : False,
-        "finish_charge" : False,
-        "need_to_charge" : False,
-        "start_charge" : False,
-        "nav_idletask" : False
+        "nav_start": False,
+        "finish_charge": False,
+        "need_to_charge": False,
+        "start_charge": False,
+        "nav_idletask": False
     }
     SetDict = setCollection.find_one()
     setCollection.update_one({"_id": SetDict["_id"]}, {"$set": set_info})
@@ -349,7 +366,8 @@ if __name__ == "__main__":
                         apeTask.apeRun.Action_Detail()
                         if apeTask.apeRun.AGV_operationDone:
                             # update tracking status
-                            NavtaskCollection.update_one({"_id":NavtaskDict["_id"]},{"$set": {"tracking_end":False}})
+                            NavtaskCollection.update_one({"_id": NavtaskDict["_id"]}, {
+                                                         "$set": {"tracking_end": False}})
                             # change statu from wait_for_tracking to do_operation
                             apeTask.apeRun.station_reach()
 
@@ -368,7 +386,8 @@ if __name__ == "__main__":
                         # 判断空闲策略是否在执行，如果执行，则直接删掉
                         if apeTask.state != "idle" and setDict["nav_idletask_run"]:
                             navDict = NavtaskCollection.find_one()
-                            NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_CANCELED, "task_run_status": CANCELED}})
+                            NavtaskCollection.update_one({"_id": navDict["_id"]}, {
+                                                         "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
 
                 # 如果不能够执行充电任务
                 else:
@@ -378,11 +397,12 @@ if __name__ == "__main__":
                         # 增加充电error
                         Add_Error_DB("Low Battery")
                         # 播放充电语音
-                        tool.Run_ShellCmd("play "+ VOICE_FOLD+CHARGE_NAME)
+                        tool.Run_ShellCmd("play " + VOICE_FOLD+CHARGE_NAME)
                         # 暂停任务
                         navDict = NavtaskCollection.find_one()
                         if apeTask.state == "start":
-                            NavtaskCollection.update_one({"_id":navDict["_id"]}, {"$set":{"task_control_status":TASK_STOP, "task_run_status": SUSPENDED}})
+                            NavtaskCollection.update_one({"_id": navDict["_id"]}, {
+                                                         "$set": {"task_control_status": TASK_STOP, "task_run_status": SUSPENDED}})
 
                         # 更新时间戳
                         timeStamp = time.time()
@@ -391,16 +411,18 @@ if __name__ == "__main__":
                 if RestoretaskCollection.find_one():
                     # 当当前任务为空闲状态时，下发循环任务
                     if apeTask.apeRun == None and Navigation_Is_Effecitve():
-                        navtask_Info = RestoretaskCollection.find_one({},{"_id":0})
+                        navtask_Info = RestoretaskCollection.find_one({}, {
+                                                                      "_id": 0})
                         navtask_Info["task_control_status"] = TASK_START
                         navtask_Info["task_run_status"] = RUNNING
-                        NavtaskCollection.update_one({}, {'$set': navtask_Info})
+                        NavtaskCollection.update_one(
+                            {}, {'$set': navtask_Info})
                         RestoretaskCollection.delete_one({})
-                        setCollection.update_one({"_id": SetDict["_id"]}, {"$set": {"finish_charge" : False}})
+                        setCollection.update_one({"_id": SetDict["_id"]}, {
+                                                 "$set": {"finish_charge": False}})
                 else:
-                    setCollection.update_one({"_id": SetDict["_id"]}, {"$set": {"finish_charge" : False}})
-
-
+                    setCollection.update_one({"_id": SetDict["_id"]}, {
+                                             "$set": {"finish_charge": False}})
 
         except IOError as e:
             if e.errno == errno.EPIPE:
@@ -408,7 +430,6 @@ if __name__ == "__main__":
 
         # except Exception as e:
         #     print("The state machine meeting error: {}".format(e))
-
 
     # 需要进行处理的部分
     print("navigation_task shutdown time!")
