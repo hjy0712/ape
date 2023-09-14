@@ -191,7 +191,7 @@ def generate_maps():
             route_json = route_json["advancedCurveList"]
     # 人工示教地图
     else:
-        with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
+        with open(PATH_MAP + PATH_OPTIMAL_MAP_NAME, "r", encoding="utf8") as f:
             route_json = json.load(f)
             route_json = route_json["demonstrationPathList"]
     # maps表用来记录各个节点的子节点
@@ -231,7 +231,7 @@ def Station_Match(pos : list):
             station_list = path_origin["advancedPointList"]
     # 人工示教地图
     else:
-        with open(PATH_MAP + PATH_MAP_NAME, "r", encoding="utf8") as f:
+        with open(PATH_MAP + PATH_OPTIMAL_MAP_NAME, "r", encoding="utf8") as f:
             path_origin = json.load(f)
             station_list = path_origin["advancedPointList"]
     for item in station_list:

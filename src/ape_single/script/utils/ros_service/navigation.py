@@ -236,7 +236,7 @@ class Navigation:
             "roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
         time.sleep(1.5)
         Run_ShellCmd(
-            "roslaunch APETrack/PoseDataor_loc reflector_local.launch map_file:=" + YamlFile)
+            "roslaunch ape_reflector_loc reflector_local.launch map_file:=" + YamlFile)
         self.__isRosLocOpen = 1
 
     def Kill_Localization(self) -> None:

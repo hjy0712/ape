@@ -163,6 +163,8 @@ def Complete_Manual_Planning():
         condition = {"_id": configDict["_id"]}
         configCollection.update_one(condition, {'$set' : {"init_status":False}})
 
+        # 开始转换地图
+        tool.Run_ShellCmd("roslaunch manual_teach_pkg optimal.launch")
         return Api_Result(success)
     except Exception as reason:
         current_app.logger.error("{} : {}".format(request.path, reason))
