@@ -13,12 +13,12 @@ from cartographer_ros_msgs.srv import *
 from transforms3d.euler import euler2quat
 
 import sys
-sys.path.append('/home/ape/APE_Application/src/ape_single/script/')
+sys.path.append('/home/ape/aiten_server_py/src/ape_single/script/')
 
 from utils.ros_service.icp import ICP
 
 import sys
-sys.path.append('/home/ape/APE_Application/src/ape_single/script/')
+sys.path.append('/home/ape/aiten_server_py/src/ape_single/script/')
 
 from configs.config_path import *
 

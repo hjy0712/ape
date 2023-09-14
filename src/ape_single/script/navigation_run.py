@@ -194,9 +194,6 @@ class NavRun(object):
         configDict = configCollection.find_one()
         self.speed_limit = configDict["motion_param"]["max_speed"]
 
-        # 日志
-        self.logger = log.Logger()
-
     def seqCallback(self, msg):
         """用于control向后端发送的sequenceID的回调函数
 
@@ -361,7 +358,7 @@ class NavRun(object):
 
         # 判断AGV当前位置是否在站点上
         # if first_distance <= 0.25 and first_angle <= 10:
-        if first_distance <= 0.25:
+        if first_distance <= 5:
             if current_station == first_station:
                 return True
             else:
@@ -442,21 +439,24 @@ class NavRun(object):
                 ignoreDir = item["ignoreDir"]
         return station_info, ignoreDir
 
-    def Tech_Optimal_Msg(pathMsg, path_item:dict):
+    def Tech_Optimal_Msg(self, pathMsg, path_item: dict):
         # 起点终点信息
+        # print(pathMsg)
+        # print(path_item)
         station_info = PositionInfo()
         station_info.x = path_item["startPos"]["x"]
         station_info.y = path_item["startPos"]["y"]
         station_info.theta = path_item["startPos"]["theta"]
         pathMsg.startPointPosition = station_info
 
-        station_info.x = path_item["startPos"]["x"]
-        station_info.y = path_item["startPos"]["y"]
-        station_info.theta = path_item["startPos"]["theta"]
+        station_info = PositionInfo()
+        station_info.x = path_item["endPos"]["x"]
+        station_info.y = path_item["endPos"]["y"]
+        station_info.theta = path_item["endPos"]["theta"]
         pathMsg.endPointPosition = station_info
 
         pathMsg.ignoreDir = False
-    
+
         if path_item["className"] == "bezier_curve":
             pathMsg.controlPointsCnt = 4
             pathMsg.lineType = 3
@@ -474,9 +474,11 @@ class NavRun(object):
             pathMsg.lineType = 1
             pathMsg.controlPointsCnt = 0
 
+        log.logger.info("pathMsg is {}".format(pathMsg))
+
         return pathMsg
 
-    def GetPathData(self, station_start: str, station_stop: str)->list:
+    def GetPathData(self, station_start: str, station_stop: str) -> list:
         """返回每段路径的topic格式
 
         Args:
@@ -518,8 +520,10 @@ class NavRun(object):
                 if item["startPos"]["instanceName"] == station_start and item["endPos"]["instanceName"] == station_stop:
                     pathMsg.index = item["instanceName"]
 
-                    ## TODO
+                    # TODO
                     for path_item in item["optimal_path"]:
+                        log.logger.info(path_item)
+                        # print(path_item)
                         pathMsg = self.Tech_Optimal_Msg(pathMsg, path_item)
                         msg_list.append(pathMsg)
                 break
@@ -589,9 +593,9 @@ class NavRun(object):
             for pathMsg in pathMsg_list:
                 self.seq += 1
                 pathMsg.sequenceID = self.seq
-                self.logger.info("sequenceID is {}".format(self.seq))
-                self.logger.info("pathmsg is {}".format(pathMsg))
-                
+                log.logger.info("sequenceID is {}".format(self.seq))
+                log.logger.info("pathmsg is {}".format(pathMsg))
+
                 print("seq_received is {}".format(self.seq_received))
                 print("seq is {}".format(self.seq))
                 while self.seq_received != self.seq:  # 等待control收到信息
@@ -605,7 +609,7 @@ class NavRun(object):
                             # 取消任务并阻塞
                             navDict = NavtaskCollection.find_one()
                             NavtaskCollection.update_one({"_id": navDict["_id"]}, {
-                                                        "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
+                                "$set": {"task_control_status": TASK_CANCELED, "task_run_status": CANCELED}})
                             # 直接退出程序
                             return False
                         print(pathMsg)
@@ -616,7 +620,7 @@ class NavRun(object):
                     except Exception as e:
                         print("publish error: {}".format(str(e)))
 
-    def Create_Line(self, station: str)->list:
+    def Create_Line(self, station: str) -> list:
         """创建从当前点到目标站点的直线路径
 
         Args:

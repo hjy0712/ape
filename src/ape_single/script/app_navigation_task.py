@@ -176,7 +176,7 @@ class NavTask(object):
                 PauseTracking = rospy.ServiceProxy(
                     CONTROL_TASK_SERVICE_NAME, TaskStatus)
                 resp1 = PauseTracking(2)
-                return resp1.success
+
             else:
                 raise Exception("service dead")
         except rospy.ServiceException as e:

@@ -234,7 +234,7 @@ class Navigation:
         # print("roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
         Run_ShellCmd(
             "roslaunch ape_coordinate ape_localization.launch load_state_filename:=" + PbstreamFile)
-        time.sleep(1.5)
+        time.sleep(3)
         Run_ShellCmd(
             "roslaunch ape_reflector_loc reflector_local.launch map_file:=" + YamlFile)
         self.__isRosLocOpen = 1
