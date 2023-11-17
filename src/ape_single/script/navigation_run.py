@@ -280,7 +280,7 @@ class NavRun(object):
             self.AGV_operationDone = True
             setCollection.update_one({}, {"$set": {"charge_do_open": True}})
 
-        # 延时等待
+        # 延时等待   ????等待操作还是
         else:
             if self.wait_time_trigger:
                 self.wait_time = operation
@@ -299,11 +299,11 @@ class NavRun(object):
         self.AGV_operationDone = False
         # change the database
         self.AGV_stationIndex += 1
-        if self.AGV_stationIndex == len(self.AGV_stationList) - 1:
+        if self.AGV_stationIndex == len(self.AGV_stationList) - 1:  #如果没走完？？？
             self.AGV_currentTime += 1
 
-        elif self.AGV_stationIndex == len(self.AGV_stationList):
-            if self.AGV_currentTime != self.AGV_goalTime:
+        elif self.AGV_stationIndex == len(self.AGV_stationList):  #如果这个任务已经走完了
+            if self.AGV_currentTime != self.AGV_goalTime:  #但是总的任务链还没有完成
                 self.AGV_stationIndex = 0
 
         navtask_info = {
@@ -318,7 +318,7 @@ class NavRun(object):
             self.complete()
             return True
         else:
-            # 判断是否需要执行自由充电任务，如果是循环任务则应该暂停当前任务，在充电结束后继续执行
+            # 判断是否需要执行自由充电????任务，如果是循环任务则应该暂停当前任务，在充电结束后继续执行
             # 如果是空闲策略则应该直接删除任务
             if self.AGV_stationIndex == len(self.AGV_stationList) - 1:
                 SetDict = setCollection.find_one()
@@ -326,7 +326,7 @@ class NavRun(object):
                     # 清空等待任务数据库
                     RestoretaskCollection.delete_many({})
                     # 保存当前任务
-                    if not SetDict["nav_idletask_run"]:
+                    if not SetDict["nav_idletask_run"]:     # ????
                         navtask_Info = NavtaskCollection.find_one(
                             {}, {"_id": 0})
                         navtask_Info["current_station_index"] = 0
@@ -341,7 +341,7 @@ class NavRun(object):
             self.send_start()
             return True
 
-    def First_Station(self, first_station: str):
+    def First_Station(self, first_station: str):  #是不是多余了
         """执行第一个点逻辑
 
         Args:

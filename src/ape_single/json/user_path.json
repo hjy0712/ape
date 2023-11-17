@@ -1,0 +1,314 @@
+{
+    "advancedPointList": [
+        {
+            "className": "LocationMark",
+            "dir": 0.0,
+            "ignoreDir": false,
+            "instanceName": "LM1",
+            "nickName": "",
+            "pos": {
+                "x": -3.52659,
+                "y": -4.92636
+            }
+        },
+        {
+            "className": "LocationMark",
+            "dir": 0.0,
+            "ignoreDir": false,
+            "instanceName": "LM2",
+            "nickName": "",
+            "pos": {
+                "x": 1.26554,
+                "y": -4.92636
+            }
+        },
+        {
+            "className": "LocationMark",
+            "dir": 1.5707963705062866,
+            "ignoreDir": false,
+            "instanceName": "LM3",
+            "nickName": "",
+            "pos": {
+                "x": 3.81597,
+                "y": -2.94615
+            }
+        },
+        {
+            "className": "LocationMark",
+            "dir": 1.5707963705062866,
+            "ignoreDir": false,
+            "instanceName": "LM4",
+            "nickName": "",
+            "pos": {
+                "x": 3.815969922935071,
+                "y": -1.18311
+            }
+        }
+    ],
+    "advancedCurveList": [
+        {
+            "className": "StraightPath",
+            "controlPos1": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "controlPos2": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM2",
+                "nickName": "",
+                "pos": {
+                    "x": 1.26554,
+                    "y": -4.92636
+                }
+            },
+            "instanceName": "LM1-LM2",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM1",
+                "nickName": "",
+                "pos": {
+                    "x": -3.52659,
+                    "y": -4.92636
+                }
+            }
+        },
+        {
+            "className": "StraightPath",
+            "controlPos1": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "controlPos2": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM1",
+                "nickName": "",
+                "pos": {
+                    "x": -3.52659,
+                    "y": -4.92636
+                }
+            },
+            "instanceName": "LM2-LM1",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM2",
+                "nickName": "",
+                "pos": {
+                    "x": 1.26554,
+                    "y": -4.92636
+                }
+            }
+        },
+        {
+            "className": "BezierPath",
+            "controlPos1": {
+                "x": 3.1783625,
+                "y": -4.92636
+            },
+            "controlPos2": {
+                "x": 3.81597,
+                "y": -4.4313075
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM3",
+                "nickName": "",
+                "pos": {
+                    "x": 3.81597,
+                    "y": -2.94615
+                }
+            },
+            "instanceName": "LM2-LM3",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM2",
+                "nickName": "",
+                "pos": {
+                    "x": 1.26554,
+                    "y": -4.92636
+                }
+            }
+        },
+        {
+            "className": "BezierPath",
+            "controlPos1": {
+                "x": 3.81597,
+                "y": -4.4313075
+            },
+            "controlPos2": {
+                "x": 3.1783625,
+                "y": -4.92636
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM2",
+                "nickName": "",
+                "pos": {
+                    "x": 1.26554,
+                    "y": -4.92636
+                }
+            },
+            "instanceName": "LM3-LM2",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM3",
+                "nickName": "",
+                "pos": {
+                    "x": 3.81597,
+                    "y": -2.94615
+                }
+            }
+        },
+        {
+            "className": "StraightPath",
+            "controlPos1": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "controlPos2": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM4",
+                "nickName": "",
+                "pos": {
+                    "x": 3.815969922935071,
+                    "y": -1.18311
+                }
+            },
+            "instanceName": "LM3-LM4",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM3",
+                "nickName": "",
+                "pos": {
+                    "x": 3.81597,
+                    "y": -2.94615
+                }
+            }
+        },
+        {
+            "className": "StraightPath",
+            "controlPos1": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "controlPos2": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "endPos": {
+                "className": "",
+                "instanceName": "LM3",
+                "nickName": "",
+                "pos": {
+                    "x": 3.81597,
+                    "y": -2.94615
+                }
+            },
+            "instanceName": "LM4-LM3",
+            "property": [
+                {
+                    "int32Value": 0,
+                    "key": "direction",
+                    "type": "int",
+                    "value": "MA=="
+                },
+                {
+                    "int32Value": 0,
+                    "key": "movestyle",
+                    "type": "int",
+                    "value": "MA=="
+                }
+            ],
+            "startPos": {
+                "className": "",
+                "instanceName": "LM4",
+                "nickName": "",
+                "pos": {
+                    "x": 3.815969922935071,
+                    "y": -1.18311
+                }
+            }
+        }
+    ]
+}

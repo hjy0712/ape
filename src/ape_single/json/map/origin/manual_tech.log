@@ -1,0 +1,34 @@
+map image(/home/ape/aiten-server-py/src/ape_single/script/envs/map/origin/origin.pgm) 
+map origin (-41.1725, -29.5217, 0.0000)
+pgm w = 1022, h = 1142
+end function: ConstructMapFromPGM
+pose : start (3.2511, 1.9712, 0.0000),goal (-7.3210, -0.3099, 0.0000)
+derta h1 = 24, h2 = 8, w1 = 10
+start cell (888, 629) : goal cell (0, 0) 
+construct path, use_voronoi is true : size(1)
+i = 1, transform_base_map_ size = 1167124
+start cell (677, 584) : goal cell (0, 0) 
+construct path, use_voronoi is true : size(2)
+i = 3, transform_base_map_ size = 1167124
+start cell (888, 629) : goal cell (677, 585) 
+construct path, use_voronoi is false : size(256)
+i = 553, transform_base_map_ size = 1167124
+size : s_v_path(1), v_v_path(254), g_v_path(2), sum path(257)
+grid size : s_v_path(1), v_v_path(254), g_v_path(2), sum path(257)
+grid axis:goal (677, 557)
+grid axis:start (888, 512)
+.......................... 1
+raw path: grid(53), rough(53),safe_grid (8)
+after delte line :raw path: grid(2), rough(2)
+insert goal to path (3)
+include_angle = -3.1350:kINCLUDED_ANGLE = 2.9671
+after dir :raw path: grid(2), rough(2)
+cv key grid path (888, 512) : ros world (3.2525, 1.9533)
+cv key grid path (677, 557) : ros world (-7.2975, -0.2967)
+i = 0, phi(-2.9307)
+............ FORWARD_WALK ..................
+walk_deerta_dir(-3.394245): deerta_dir(-3.394245)
+manual_start_slam_dir_ (3.411697) : manual_goal_slam_dir_(3.279768)
+walk_init_dir (3.411697) : walk_end_dir(3.279768)
+There is two point:best traj is straight
+end manual teach 

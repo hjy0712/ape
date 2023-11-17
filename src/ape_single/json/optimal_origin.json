@@ -1,0 +1,63 @@
+{
+    "advancedPointList": [
+        {
+            "className": "DemonstrationPoint",
+            "dir": 3.4116966509203537,
+            "ignoreDir": false,
+            "instanceName": "DP2",
+            "nickName": "2",
+            "pos": {
+                "x": 3.2511479549612945,
+                "y": 1.9712081860631676
+            }
+        },
+        {
+            "className": "DemonstrationPoint",
+            "dir": 3.2797680289044027,
+            "ignoreDir": false,
+            "instanceName": "DP1",
+            "nickName": "1",
+            "pos": {
+                "x": -7.320966062086062,
+                "y": -0.3098973145575401
+            }
+        }
+    ],
+    "demonstrationPathList": [
+        {
+            "className": "DemonstrationPath",
+            "endPos": {
+                "instanceName": "DP1",
+                "nickName": "1",
+                "pos": {
+                    "x": -7.320966062086062,
+                    "y": -0.3098973145575401
+                }
+            },
+            "instanceName": "DP2-DP1",
+            "optimal_path": [
+                {
+                    "className": "straight_line",
+                    "endPos": {
+                        "theta": 3.2797679901123047,
+                        "x": -7.3209662437438965,
+                        "y": -0.3098973035812378
+                    },
+                    "startPos": {
+                        "theta": -2.930729389190674,
+                        "x": 3.252500057220459,
+                        "y": 1.9533005952835083
+                    }
+                }
+            ],
+            "startPos": {
+                "instanceName": "DP2",
+                "nickName": "2",
+                "pos": {
+                    "x": 3.2511479549612945,
+                    "y": 1.9712081860631676
+                }
+            }
+        }
+    ]
+}
