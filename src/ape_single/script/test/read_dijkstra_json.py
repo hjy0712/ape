@@ -4,13 +4,18 @@ from dijkstra import Dijkstra
 
 class Read_json:
     def __init__(self, jsonPath):
-        with open(jsonPath, "r", encoding="utf8") as f:
+        self.jsonPath = jsonPath
+        with open(self.jsonPath, "r", encoding="utf8") as f:
             self.contents = json.load(f)
         self.smap = {}
         self.mapPoints = []
+        self.mapPointsPos = {}
         self.mapLines = []
+        # 取所有正向的路径，用于后续画图
+        self.allPositiveMap = {}
 
     def read_lines(self):
+        self.mapLines = []
         # 读取json文件中的线，以[['起点', '终点'], ...]的列表形式储存
         for lines in self.contents["advancedCurveList"]:
             startPoint, endPoint = lines["instanceName"].split('-')
@@ -33,6 +38,7 @@ class Read_json:
         # 读取json文件中的点，以列表形式储存
         for point in self.contents["advancedPointList"]:
             self.mapPoints.append(point["instanceName"])
+            self.mapPointsPos[point["instanceName"]] = point["pos"]
         print("读取到的点为", self.mapPoints)
 
     def create_map(self):
@@ -51,27 +57,37 @@ class Read_json:
                     smapValue[line[1]] = line[2]
             self.smap[point] = smapValue
         print("构建的地图为", self.smap)
+        return self.smap
+
+    def find_way(self, start, goal):
+        self.read_points()
+        self.read_lines()
+        self.create_map()
+        dijk = Dijkstra(self.smap, start, goal)
+        dijk.shortest_path()
+
+        # 如果没有找到全为正向的路径，将所有反向路径加入，再次寻找
+        if dijk.findDijkstra == False:
+            for i in range(len(self.mapLines)):
+                self.mapLines.append([self.mapLines[i][1], self.mapLines[i][0], self.mapLines[i][2]])
+            print("————————————————————————————————————")
+            print("使用到反方向路径")
+            self.create_map()
+            g = self.smap
+            dijk = Dijkstra(g, start, goal)
+            dijk.shortest_path()
+            print("self.allPositiveMap", self.allPositiveMap)
+            return dijk.best_way
 
 
 if __name__ == '__main__':
     jsonPath = '/home/houjj/APE/aiten-server-py/src/ape_single/json/user_origin_path.json'
     read_json = Read_json(jsonPath)
-    read_json.read_points()
-    read_json.read_lines()
-    read_json.create_map()
-    start = 'LM2'
-    goal = 'LM4'
-    g = read_json.smap
-    dijk = Dijkstra(g, start, goal)
-    dijk.shortest_path()
+    read_json.find_way('LM5', 'LM1')
+    print(read_json.mapPointsPos)
+    # [['LM1', {'x': -3.52659, 'y': -4.92636}], ['LM2', {'x': 1.26554, 'y': -4.92636}], 
+    # ['LM3', {'x': 3.81597, 'y': -2.94615}], ['LM4', {'x': 3.815969922935071, 'y': -1.18311}], 
+    # ['LM5', {'x': -4, 'y': -5}]]
     
-    if dijk.findDijkstra == False:
-        for i in range(len(read_json.mapLines)):
-            read_json.mapLines.append([read_json.mapLines[i][1], read_json.mapLines[i][0], read_json.mapLines[i][2]])
-        print("————————————————————————————————————")
-        print("使用到反方向路径")
-        read_json.create_map()
-        g = read_json.smap
-        dijk = Dijkstra(g, start, goal)
-        dijk.shortest_path()
+    
     

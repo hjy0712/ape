@@ -14,6 +14,7 @@ class Dijkstra:
         self.min_dis = 0.0
 
         self.findDijkstra = True
+        self.best_way = []
 
     def shortest_path(self):
         while True:
@@ -29,14 +30,14 @@ class Dijkstra:
             if min_node == self.goal:
                 print("找到路径,Djijkstrak路径搜索结束")
                 self.min_dis = self.close_list[self.goal]
-                best_way = [self.goal]
+                self.best_way = [self.goal]
                 father_node = self.parent[self.goal]
                 while father_node != self.start:
-                    best_way.append(father_node)
+                    self.best_way.append(father_node)
                     father_node = self.parent[father_node]
-                best_way.append(self.start)
-                best_way = best_way[::-1]
-                print("最佳路径为{},最短距离为{}".format(best_way, self.min_dis))
+                self.best_way.append(self.start)
+                self.best_way = self.best_way[::-1]
+                print("最佳路径为{},最短距离为{}".format(self.best_way, self.min_dis))
                 return True
 
             for node in self.graph[min_node]:

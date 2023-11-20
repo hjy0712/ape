@@ -16,8 +16,8 @@
                 "instanceName": "LM5",
                 "nickName": "",
                 "pos": {
-                    "x": -4,
-                    "y": -5
+                    "x": 2.5,
+                    "y": 0
                 }
             },
             "instanceName": "LM4-LM5",
@@ -363,8 +363,8 @@
             "instanceName": "LM5",
             "nickName": "",
             "pos": {
-                "x": -4,
-                "y": -5
+                "x": 2.5,
+                "y": 0
             }
         }
     ],
