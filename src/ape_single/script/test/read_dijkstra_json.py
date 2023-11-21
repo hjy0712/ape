@@ -11,8 +11,6 @@ class Read_json:
         self.mapPoints = []
         self.mapPointsPos = {}
         self.mapLines = []
-        # 取所有正向的路径，用于后续画图
-        self.allPositiveMap = {}
 
     def read_lines(self):
         self.mapLines = []
@@ -32,14 +30,14 @@ class Read_json:
                 self.mapLines.append([startPoint, endPoint, distance])
             else:
                 self.mapLines.append([endPoint, startPoint, distance])
-        print("读取到的点之间可行路径为", self.mapLines)
+        #print("读取到的点之间可行路径为", self.mapLines)
 
     def read_points(self):
         # 读取json文件中的点，以列表形式储存
         for point in self.contents["advancedPointList"]:
             self.mapPoints.append(point["instanceName"])
             self.mapPointsPos[point["instanceName"]] = point["pos"]
-        print("读取到的点为", self.mapPoints)
+        #print("读取到的点为", self.mapPoints)
 
     def create_map(self):
         # 创造指定格式的地图
@@ -56,7 +54,7 @@ class Read_json:
                 if point == line[0]:
                     smapValue[line[1]] = line[2]
             self.smap[point] = smapValue
-        print("构建的地图为", self.smap)
+        #print("构建的地图为", self.smap)
         return self.smap
 
     def find_way(self, start, goal):
@@ -76,8 +74,7 @@ class Read_json:
             g = self.smap
             dijk = Dijkstra(g, start, goal)
             dijk.shortest_path()
-            print("self.allPositiveMap", self.allPositiveMap)
-            return dijk.best_way
+        return dijk.best_way
 
 
 if __name__ == '__main__':
